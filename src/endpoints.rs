@@ -13,8 +13,7 @@ use tiny_http::Header;
 
 use crate::config::Config;
 use crate::database as db;
-use crate::finance::{self as fin, AssetId};
-use crate::market as mkt;
+use crate::model::{self, Amount, AssetId, Market};
 use crate::{Response, User};
 
 fn respond_html(markup: Markup) -> Response {
@@ -121,7 +120,7 @@ fn view_email<'a>(config: &Config, email: &'a str) -> &'a str {
 struct Context<'a> {
     config: &'a Config,
     user: &'a User,
-    user_points: fin::Amount,
+    user_points: Amount,
 }
 
 impl<'a> Context<'a> {
@@ -130,8 +129,8 @@ impl<'a> Context<'a> {
         user: &'a User,
         tx: &mut db::Transaction,
     ) -> db::Result<Context<'a>> {
-        let user_points_account = fin::ensure_points_account(tx, &config.app, &user.email)?;
-        let user_points = fin::get_account_balance(tx, user_points_account)?;
+        let user_points_account = model::ensure_points_account(tx, &config.app, &user.email)?;
+        let user_points = model::get_account_balance(tx, user_points_account)?;
         let ctx = Context {
             config,
             user,
@@ -140,7 +139,7 @@ impl<'a> Context<'a> {
         Ok(ctx)
     }
 
-    pub fn market_url(&self, market: &mkt::Market, suffix: &str) -> String {
+    pub fn market_url(&self, market: &Market, suffix: &str) -> String {
         format!(
             "{}/market/{}{}",
             self.config.server.prefix, market.slug, suffix
@@ -166,7 +165,7 @@ fn view_header(ctx: &Context) -> Markup {
     }
 }
 
-fn view_index(ctx: &Context, markets: &[mkt::Market]) -> Markup {
+fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
     html! {
         (view_html_head("Predict-o-matic"))
         body {
@@ -206,14 +205,14 @@ pub fn handle_index(
     let mut markets = Vec::new();
     for res_slug in market_slugs {
         let slug = res_slug?;
-        markets.push(mkt::get_market_by_slug(tx, &slug)?.expect("We know the market exists."));
+        markets.push(model::get_market_by_slug(tx, &slug)?.expect("We know the market exists."));
     }
 
     let body = view_index(&ctx, &markets);
     Ok(respond_html(body))
 }
 
-fn view_market(ctx: &Context, market: &mkt::Market) -> Markup {
+fn view_market(ctx: &Context, market: &Market) -> Markup {
     html! {
         (view_html_head("Predict-o-matic"))
         body {
@@ -295,7 +294,7 @@ pub fn handle_market(
     market_slug: &str,
 ) -> db::Result<Response> {
     let ctx = Context::new(config, user, tx)?;
-    let market = match mkt::get_market_by_slug(tx, market_slug)? {
+    let market = match model::get_market_by_slug(tx, market_slug)? {
         None => return Ok(not_found("No such market exists.")),
         Some(market) => market,
     };
@@ -312,7 +311,7 @@ pub fn handle_deposit(
     body: &str,
 ) -> db::Result<Response> {
     let ctx = Context::new(config, user, tx)?;
-    let market = match mkt::get_market_by_slug(tx, market_slug)? {
+    let market = match model::get_market_by_slug(tx, market_slug)? {
         None => return Ok(not_found("No such market exists.")),
         Some(market) => market,
     };

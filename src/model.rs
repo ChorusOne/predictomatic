@@ -9,19 +9,13 @@
 
 use std::fmt;
 
-use crate::config::AppConfig;
+use crate::config::{AppConfig, MarketConfig, MarketKind};
 use crate::database::{self as db, Transaction};
 
 type Result<T> = db::Result<T>;
 
 #[derive(Copy, Clone, Debug)]
-pub struct MarketId(pub i64);
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct AssetId(pub i64);
-
-#[derive(Copy, Clone, Debug)]
-pub struct AccountId(i64, AssetId);
+pub struct MarketId(i64);
 
 impl MarketId {
     /// Market 0 is the global "no market" for points accounts outside of a market.
@@ -32,23 +26,16 @@ impl MarketId {
     pub const NONE: MarketId = MarketId(0);
 }
 
+#[derive(Copy, Clone, Debug)]
+pub struct OutcomeId(i64, MarketId);
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct AssetId(i64);
+
 impl AssetId {
     /// The asset id for the native asset ("points").
     pub const POINTS: AssetId = AssetId(0);
-}
 
-impl AccountId {
-    /// The account id for the system's points account.
-    pub const SYSTEM_POINTS: AccountId = AccountId(0, AssetId::POINTS);
-}
-
-/// An amount of a given asset.
-///
-/// The integer represents a micro-increment of the asset, i.e. 10^-6.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Amount(i64, AssetId);
-
-impl AssetId {
     pub fn zero(&self) -> Amount {
         Amount(0, *self)
     }
@@ -83,6 +70,30 @@ impl AssetId {
         ))
     }
 }
+
+/// Convert an outcome to its correcponding asset.
+///
+/// In the database, the id for an asset is the id of the outcome, but in
+/// addition to outcome assets, we have the native asset "points" with id 0.
+impl From<OutcomeId> for AssetId {
+    fn from(outcome_id: OutcomeId) -> AssetId {
+        AssetId(outcome_id.0)
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct AccountId(i64, AssetId);
+
+impl AccountId {
+    /// The account id for the system's points account.
+    pub const SYSTEM_POINTS: AccountId = AccountId(0, AssetId::POINTS);
+}
+
+/// An amount of a given asset.
+///
+/// The integer represents a micro-increment of the asset, i.e. 10^-6.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Amount(i64, AssetId);
 
 impl fmt::Display for Amount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -151,6 +162,72 @@ pub fn ensure_points_account(
 pub fn get_account_balance(tx: &mut Transaction, account_id: AccountId) -> Result<Amount> {
     let amount = db::get_account_balance(tx, account_id.0)?;
     Ok(Amount(amount, account_id.1))
+}
+
+pub struct Outcome {
+    pub id: OutcomeId,
+    pub value: String,
+}
+
+pub struct Market {
+    pub id: MarketId,
+    pub slug: String,
+    pub title: String,
+    pub description: String,
+    pub kind: MarketKind,
+    pub outcomes: Vec<Outcome>,
+}
+
+pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Market>> {
+    let market = match db::get_market_by_slug(tx, slug)? {
+        Some(market) => market,
+        None => return Ok(None),
+    };
+
+    let market_id = MarketId(market.id);
+    let kind: MarketKind =
+        serde_plain::from_str(&market.kind).expect("Invalid market kind in database.");
+
+    let mut outcomes = Vec::new();
+    for res_outcome in db::get_outcomes(tx, market.id)? {
+        let outcome = res_outcome?;
+        outcomes.push(Outcome {
+            id: OutcomeId(outcome.id, market_id),
+            value: outcome.value,
+        });
+    }
+
+    Ok(Some(Market {
+        id: market_id,
+        slug: market.slug,
+        title: market.title,
+        description: market.description,
+        kind,
+        outcomes,
+    }))
+}
+
+pub fn create_market(tx: &mut Transaction, market: &MarketConfig) -> Result<MarketId> {
+    let kind = market.kind.to_string();
+    let market_id = db::create_market(tx, &market.slug, &kind, &market.title, &market.description)?;
+
+    for outcome in &market.outcomes {
+        db::create_outcome(tx, market_id, outcome)?;
+    }
+
+    Ok(MarketId(market_id))
+}
+
+/// Create the configured markets if they don't yet exist.
+pub fn ensure_markets(tx: &mut Transaction, markets: &[MarketConfig]) -> Result<()> {
+    for market in markets {
+        if get_market_by_slug(tx, &market.slug)?.is_some() {
+            continue;
+        }
+        create_market(tx, market)?;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

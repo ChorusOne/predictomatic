@@ -21,8 +21,7 @@ use endpoints::{bad_request, internal_error, not_found, service_unavailable};
 mod config;
 mod database;
 mod endpoints;
-mod finance;
-mod market;
+mod model;
 
 type Response = tiny_http::Response<Cursor<Vec<u8>>>;
 
@@ -62,7 +61,7 @@ fn init_database<'conn>(
     let mut connection = db::Connection::new(raw_connection);
     let mut tx = connection.begin()?;
     db::ensure_schema_exists(&mut tx)?;
-    market::ensure_markets(&mut tx, markets)?;
+    model::ensure_markets(&mut tx, markets)?;
     tx.commit()?;
     Ok(connection)
 }
