@@ -328,6 +328,8 @@ pub fn handle_deposit(
         }
     }
 
+    model::market_deposit(tx, &market, amount, &user.email)?;
+
     Ok(redirect_see_other(ctx.market_url(&market, "")))
 }
 

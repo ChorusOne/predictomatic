@@ -123,6 +123,14 @@ impl fmt::Display for Amount {
 #[derive(Copy, Clone, Debug)]
 pub struct EventId(i64);
 
+/// Create a transfer from one account to another.
+pub fn create_transfer(tx: &mut Transaction, event: EventId, from_account: AccountId, to_account: AccountId, amount: Amount) -> Result<()> {
+    assert_eq!(from_account.1, to_account.1, "Asset must be the same for both accounts.");
+    assert_eq!(from_account.1, amount.1, "Asset must be the same for accounts and amount.");
+    assert!(amount.0 > 0, "Transfer must be positive.");
+    db::create_transfer(tx, event.0, from_account.0, to_account.0, amount.0)
+}
+
 /// Ensure that an account exists for the given (market_id, owner_id, asset_id), return its id.
 pub fn ensure_account(
     tx: &mut Transaction,
@@ -148,12 +156,12 @@ pub fn ensure_points_account(
     let id = match db::get_account_id(tx, market_id.0, asset_id.0, owner)? {
         Some(id) => id,
         None => {
-            let to_account_id = db::create_account(tx, market_id.0, asset_id.0, owner)?;
-            let from_account_id = AccountId::SYSTEM_POINTS.0;
-            let event_id = db::create_event(tx, "SYSTEM", "Sign-on bonus")?;
-            let amount = config.opening_balance_micropoints;
-            db::create_transfer(tx, event_id, from_account_id, to_account_id, amount)?;
-            to_account_id
+            let to_account = AccountId(db::create_account(tx, market_id.0, asset_id.0, owner)?, asset_id);
+            let from_account = AccountId::SYSTEM_POINTS;
+            let event = EventId(db::create_event(tx, "SYSTEM", "Sign-on bonus")?);
+            let amount = Amount(config.opening_balance_micropoints, asset_id);
+            create_transfer(tx, event, from_account, to_account, amount)?;
+            to_account.0
         }
     };
     Ok(AccountId(id, asset_id))
@@ -226,6 +234,25 @@ pub fn ensure_markets(tx: &mut Transaction, markets: &[MarketConfig]) -> Result<
         }
         create_market(tx, market)?;
     }
+
+    Ok(())
+}
+
+pub fn market_deposit(
+    tx: &mut Transaction,
+    market: &Market,
+    amount: Amount,
+    owner: &str,
+) -> Result<()> {
+    let event = EventId(db::create_event(tx, owner, "Deposit")?);
+
+    // Move the points from the user's global account, into the user's point
+    // account for this market.
+    let acc_global_points = ensure_account(tx, MarketId::NONE, AssetId::POINTS, owner)?;
+    let acc_market_points = ensure_account(tx, market.id, AssetId::POINTS, owner)?;
+    create_transfer(tx, event, acc_global_points, acc_market_points, amount)?;
+
+    // TODO: Mint the outcome shares.
 
     Ok(())
 }
