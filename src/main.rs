@@ -16,7 +16,7 @@ use tiny_http::{HeaderField, Method, Request, Server};
 
 use config::Config;
 use database as db;
-use endpoints::{internal_error, not_found, service_unavailable};
+use endpoints::{bad_request, internal_error, not_found, service_unavailable};
 
 mod config;
 mod database;
@@ -114,7 +114,7 @@ fn handle_request(
         email,
     };
 
-    let url_inner = match request.url().strip_prefix(&config.server.prefix) {
+    let url_clone = match request.url().strip_prefix(&config.server.prefix) {
         Some(url) => url.to_string(),
         None => {
             return Ok(not_found(format!(
@@ -123,6 +123,8 @@ fn handle_request(
             )));
         }
     };
+    let path_segments: Vec<_> = url_clone.trim_start_matches('/').split('/').collect();
+    println!("{:?}", path_segments);
 
     // For post requests, read the body. We need to do this once. The handler
     // may be retried, but the body we can only consume once.
@@ -138,14 +140,15 @@ fn handle_request(
 
     with_transaction(connection, |tx| {
         if request.method() == &Method::Post {
-            match url_inner.as_ref() {
-                "/predict" => unimplemented!("TODO: Handle a trade."),
+            match &path_segments[..] {
+                ["predict"] => unimplemented!("TODO: Handle a trade."),
                 _ => Ok(not_found("Not found.")),
             }
         } else {
             // Assume everything else is a GET request.
-            match url_inner.as_ref() {
-                "" | "/" => endpoints::handle_index(config, tx, &user),
+            match &path_segments[..] {
+                [] | [""] => endpoints::handle_index(config, tx, &user),
+                ["market", market_slug] => endpoints::handle_market(config, tx, &user, market_slug),
                 _ => Ok(not_found("Not found.")),
             }
         }

@@ -34,7 +34,7 @@ fn respond_error<R: Into<String>>(reason: R) -> Response {
     respond_html(page)
 }
 
-fn bad_request<R: Into<String>>(reason: R) -> Response {
+pub fn bad_request<R: Into<String>>(reason: R) -> Response {
     respond_error(reason).with_status_code(400)
 }
 
@@ -162,6 +162,43 @@ pub fn handle_index(
     }
 
     let body = view_index(config, &user, balance, &markets);
+    Ok(respond_html(body))
+}
+
+fn view_market(
+    config: &Config,
+    user: &User,
+    market: &mkt::Market,
+) -> Markup {
+    html! {
+        (view_html_head("Predict-o-matic"))
+        body {
+            h1 {
+                "Predict-o-matic"
+            }
+            // TODO: Add a unified header with username and balance.
+            h2 {
+                (market.title)
+            }
+            p {
+                (market.description)
+            }
+        }
+    }
+}
+
+pub fn handle_market(
+    config: &Config,
+    tx: &mut db::Transaction,
+    user: &User,
+    market_slug: &str,
+) -> db::Result<Response> {
+    let market = match mkt::get_market_by_slug(tx, market_slug)? {
+        None => return Ok(not_found("No such market exists.")),
+        Some(market) => market,
+    };
+
+    let body = view_market(config, user, &market);
     Ok(respond_html(body))
 }
 
