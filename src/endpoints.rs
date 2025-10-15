@@ -213,6 +213,8 @@ pub fn handle_index(
 }
 
 fn view_market(ctx: &Context, market: &Market) -> Markup {
+    let default_deposit = AssetId::POINTS.micros(10_000_000).min(ctx.user_points);
+
     html! {
         (view_html_head("Predict-o-matic"))
         body {
@@ -274,10 +276,10 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                             input
                                 name="amount"
                                 type="number"
-                                min="0"
+                                min="0.00"
                                 max=(ctx.user_points)
                                 step="any"
-                                value="10.0";
+                                value=(format!("{default_deposit:.2}"));
                         }
                         button type="submit" { "Deposit" }
                     }

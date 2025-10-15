@@ -40,6 +40,11 @@ impl AssetId {
         Amount(0, *self)
     }
 
+    /// Return `n` micro of the asset.
+    pub fn micros(&self, n: i64) -> Amount {
+        Amount(n, *self)
+    }
+
     pub fn parse_amount(&self, s: &str) -> Option<Amount> {
         use std::str::FromStr;
 
@@ -92,7 +97,7 @@ impl AccountId {
 /// An amount of a given asset.
 ///
 /// The integer represents a micro-increment of the asset, i.e. 10^-6.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug)]
 pub struct Amount(i64, AssetId);
 
 impl std::cmp::PartialOrd for Amount {
@@ -101,6 +106,22 @@ impl std::cmp::PartialOrd for Amount {
         // attempting to compare is a bug so we should panic.
         assert_eq!(self.1, other.1, "Comparing amounts for different assets.");
         self.0.partial_cmp(&other.0)
+    }
+}
+
+impl std::cmp::PartialEq for Amount {
+    fn eq(&self, other: &Self) -> bool {
+        assert_eq!(self.1, other.1, "Comparing amounts for different assets.");
+        self.0 == other.0
+    }
+}
+
+impl std::cmp::Eq for Amount { }
+
+impl std::cmp::Ord for Amount {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        assert_eq!(self.1, other.1, "Comparing amounts for different assets.");
+        self.0.cmp(&other.0)
     }
 }
 
