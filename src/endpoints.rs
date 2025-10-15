@@ -116,20 +116,44 @@ fn view_email<'a>(config: &Config, email: &'a str) -> &'a str {
     }
 }
 
-fn view_index(config: &Config, user: &User, balance: fin::Amount, markets: &[mkt::Market]) -> Markup {
+struct Context<'a> {
+    config: &'a Config,
+    user: &'a User,
+    user_points: fin::Amount,
+}
+
+impl<'a> Context<'a> {
+    pub fn new(config: &'a Config, user: &'a User, tx: &mut db::Transaction) -> db::Result<Context<'a>> {
+        let user_points_account = fin::ensure_points_account(tx, &config.app, &user.email)?;
+        let user_points = fin::get_account_balance(tx, user_points_account)?;
+        let ctx = Context {
+            config, user, user_points,
+        };
+        Ok(ctx)
+    }
+}
+
+
+fn view_header(ctx: &Context) -> Markup {
+    html! {
+        h1 {
+            a href=(ctx.config.server.prefix) { "Predict-o-matic" }
+        }
+        p {
+            "Welcome to the prediction market, " (ctx.user.email) ". "
+            "You have " (format!("{:.2}", ctx.user_points)) " points."
+        }
+    }
+}
+
+fn view_index(ctx: &Context, markets: &[mkt::Market]) -> Markup {
     html! {
         (view_html_head("Predict-o-matic"))
         body {
-            h1 {
-                "Predict-o-matic"
-            }
-            p {
-                "Welcome to the prediction market, " (user.email) ". "
-                "You have " (format!("{balance:.2}")) " points."
-            }
+            (view_header(ctx))
             h2 { "Markets" }
             @for market in markets {
-                @let market_url = format!("{}/market/{}", config.server.prefix, market.slug);
+                @let market_url = format!("{}/market/{}", ctx.config.server.prefix, market.slug);
                 div class="market" {
                     h3 {
                         a href=(market_url) { (market.title) }
@@ -148,8 +172,7 @@ pub fn handle_index(
     tx: &mut db::Transaction,
     user: &User,
 ) -> db::Result<Response> {
-    let user_points_account = fin::ensure_points_account(tx, &config.app, &user.email)?;
-    let balance = fin::get_account_balance(tx, user_points_account)?;
+    let ctx = Context::new(config, user, tx)?;
 
     // TODO: iterate the markets at once rather than getting them by id to save
     // a bit of interop, but it's SQLite so we are not even saving a round-trip,
@@ -161,22 +184,15 @@ pub fn handle_index(
         markets.push(mkt::get_market_by_slug(tx, &slug)?.expect("We know the market exists."));
     }
 
-    let body = view_index(config, &user, balance, &markets);
+    let body = view_index(&ctx, &markets);
     Ok(respond_html(body))
 }
 
-fn view_market(
-    config: &Config,
-    user: &User,
-    market: &mkt::Market,
-) -> Markup {
+fn view_market(ctx: &Context, market: &mkt::Market) -> Markup {
     html! {
         (view_html_head("Predict-o-matic"))
         body {
-            h1 {
-                "Predict-o-matic"
-            }
-            // TODO: Add a unified header with username and balance.
+            (view_header(ctx))
             h2 {
                 (market.title)
             }
@@ -193,12 +209,14 @@ pub fn handle_market(
     user: &User,
     market_slug: &str,
 ) -> db::Result<Response> {
+    let ctx = Context::new(config, user, tx)?;
     let market = match mkt::get_market_by_slug(tx, market_slug)? {
+
         None => return Ok(not_found("No such market exists.")),
         Some(market) => market,
     };
 
-    let body = view_market(config, user, &market);
+    let body = view_market(&ctx, &market);
     Ok(respond_html(body))
 }
 
