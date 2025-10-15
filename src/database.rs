@@ -80,9 +80,74 @@ impl<'i, 'a, T> Iterator for Iter<'i, 'a, T> {
 
 pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     let sql = r#"
+        create table if not exists accounts
+        ( id       integer primary key
+          -- 0 for the native asset (points), or the id of an outcome for
+          -- market accounts.
+        , asset_id integer not null
+          -- Email address for user-owned accounts, or "SYSTEM" for system-owned
+          -- accounts.
+        , owner    string not null
+          -- Credits minus debits.
+        , balance  integer not null
+          -- Every user can have at most one account per asset.
+        , unique (asset_id, owner)
+        );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        -- Events group one or more transfers. We could also call them "transaction",
+        -- but that's confusing in a database.
+        create table if not exists events
+        ( id          integer primary key
+        , created_at  string not null
+        , created_by  string not null
+        , description string not null
+        );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        create table if not exists transfers
+        ( id              integer primary key
+        , event_id        integer not null references events (id)
+        , from_account_id integer not null references accounts (id)
+        , to_account_id   integer not null references accounts (id)
+        , amount          integer not null
+        );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
         create table if not exists markets
         ( id          integer primary key
         , created_at  string  not null
+        , title       string  not null
         );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
@@ -100,26 +165,6 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
         ( id        integer primary key
         , market_id integer not null references markets (id)
         , value     string not null
-        );
-        "#;
-    let statement = match tx.statements.entry(sql.as_ptr()) {
-        Occupied(entry) => entry.into_mut(),
-        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
-    };
-    statement.reset()?;
-    match statement.next()? {
-        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
-        Done => {}
-    }
-
-    let sql = r#"
-        create table if not exist accounts
-        ( id       integer primary key
-        , asset    integer not null references (outcomes)
-        , owner    string not null
-        , balance  integer not null
-          -- Every user can have at most one account per asset.
-        , unique (token, owner)
         );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
