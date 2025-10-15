@@ -27,8 +27,10 @@ fn respond_error<R: Into<String>>(reason: R) -> Response {
     let page = html! {
         (view_html_head("Predict-o-matic Error"))
         body {
-            h1 { "D’oh!" }
-            p { (reason.into()) }
+            div class="main-error" {
+                h1 { "D’oh!" }
+                p { (reason.into()) }
+            }
         }
     };
     respond_html(page)
@@ -141,12 +143,18 @@ impl<'a> Context<'a> {
 
 fn view_header(ctx: &Context) -> Markup {
     html! {
-        h1 {
-            a href=(ctx.config.server.prefix) { "Predict-o-matic" }
-        }
-        p {
-            "Welcome to the prediction market, " (ctx.user.email) ". "
-            "You have " (format!("{:.2}", ctx.user_points)) " points."
+        nav {
+            h1 {
+                a href=(ctx.config.server.prefix) { "Predict-o-matic" }
+            }
+            " "
+            span class="balance" {
+                (format!("$\u{200a}{:.2}", ctx.user_points))
+            }
+            " "
+            span class="user" {
+                (ctx.user.email)
+            }
         }
     }
 }
@@ -156,15 +164,19 @@ fn view_index(ctx: &Context, markets: &[mkt::Market]) -> Markup {
         (view_html_head("Predict-o-matic"))
         body {
             (view_header(ctx))
-            h2 { "Markets" }
-            @for market in markets {
-                @let market_url = format!("{}/market/{}", ctx.config.server.prefix, market.slug);
-                div class="market" {
-                    h3 {
-                        a href=(market_url) { (market.title) }
-                    }
-                    p {
-                        "TODO: Add a summary of the prediction here."
+            div class="main" {
+                section {
+                    h1 { "Markets" }
+                    @for market in markets {
+                        @let market_url = format!("{}/market/{}", ctx.config.server.prefix, market.slug);
+                        div class="market" {
+                            h2 {
+                                a href=(market_url) { (market.title) }
+                            }
+                            p {
+                                "TODO: Add a summary of the prediction here."
+                            }
+                        }
                     }
                 }
             }
@@ -198,31 +210,66 @@ fn view_market(ctx: &Context, market: &mkt::Market) -> Markup {
         (view_html_head("Predict-o-matic"))
         body {
             (view_header(ctx))
-            h2 {
-                (market.title)
-            }
-            p {
-                (market.description)
-            }
-            details {
-                summary { "Deposit" }
-                p {
-                    "In order to participate in a market, "
-                    "you need to deposit points. "
-                    "Your points remain locked in the market until it resolves. "
+            div class="main" {
+                section {
+                    h1 { (market.title) }
+                    p { "I need to summarize the prediction here." }
+                    h2 { "Resolution criteria" }
+                    p { (market.description) }
                 }
-                form method="post" class="order" {
-                    label {
-                        "Points: "
-                        input
-                          name="amount"
-                          type="number"
-                          min="0"
-                          max=(ctx.user_points)
-                          step="any"
-                          value="10.0";
+                aside {
+                    table {
+                        tr {
+                            td { "Deposited" }
+                            td class="num" { "$\u{200a}0.00" }
+                        }
+                        tr {
+                            td { "Yes" }
+                            td class="num" { "$\u{200a}0.00" }
+                        }
+                        tr {
+                            td { "No" }
+                            td class="num" { "$\u{200a}0.00" }
+                        }
                     }
-                    button type="submit" { "Deposit" }
+
+                    h3 { "Your balance" }
+                    table {
+                        tr {
+                            td { "Yes" }
+                            td class="num" { "0.00" }
+                        }
+                        tr {
+                            td { "No" }
+                            td class="num" { "0.00" }
+                        }
+                        tr {
+                            td { "Market value" }
+                            td class="num" { "$\u{200a}0.00" }
+                        }
+                        tr {
+                            td { "Deposited" }
+                            td class="num" { "$\u{200a}0.00" }
+                        }
+                        tr {
+                            td { "Unrealized PnL" }
+                            td class="num" { "$\u{200a}0.00" }
+                        }
+                    }
+                    h3 { "Deposit" }
+                    form method="post" class="order" {
+                        label {
+                            "Amount "
+                            input
+                                name="amount"
+                                type="number"
+                                min="0"
+                                max=(ctx.user_points)
+                                step="any"
+                                value="10.0";
+                        }
+                        button type="submit" { "Deposit" }
+                    }
                 }
             }
         }
