@@ -14,6 +14,7 @@ use tiny_http::Header;
 use crate::config::Config;
 use crate::database as db;
 use crate::finance as fin;
+use crate::market as mkt;
 use crate::{Response, User};
 
 fn respond_html(markup: Markup) -> Response {
@@ -115,7 +116,7 @@ fn view_email<'a>(config: &Config, email: &'a str) -> &'a str {
     }
 }
 
-fn view_index(config: &Config, user: &User, balance: fin::Amount) -> Markup {
+fn view_index(config: &Config, user: &User, balance: fin::Amount, markets: &[mkt::Market]) -> Markup {
     html! {
         (view_html_head("Predict-o-matic"))
         body {
@@ -125,6 +126,18 @@ fn view_index(config: &Config, user: &User, balance: fin::Amount) -> Markup {
             p {
                 "Welcome to the prediction market, " (user.email) ". "
                 "You have " (format!("{balance:.2}")) " points."
+            }
+            h2 { "Markets" }
+            @for market in markets {
+                @let market_url = format!("{}/market/{}", config.server.prefix, market.slug);
+                div class="market" {
+                    h3 {
+                        a href=(market_url) { (market.title) }
+                    }
+                    p {
+                        "TODO: Add a summary of the prediction here."
+                    }
+                }
             }
         }
     }
@@ -138,7 +151,17 @@ pub fn handle_index(
     let user_points_account = fin::ensure_points_account(tx, &config.app, &user.email)?;
     let balance = fin::get_account_balance(tx, user_points_account)?;
 
-    let body = view_index(config, &user, balance);
+    // TODO: iterate the markets at once rather than getting them by id to save
+    // a bit of interop, but it's SQLite so we are not even saving a round-trip,
+    // and it's a hackathon so YOLO.
+    let market_slugs: Vec<_> = db::get_market_slugs(tx)?.collect();
+    let mut markets = Vec::new();
+    for res_slug in market_slugs {
+        let slug = res_slug?;
+        markets.push(mkt::get_market_by_slug(tx, &slug)?.expect("We know the market exists."));
+    }
+
+    let body = view_index(config, &user, balance, &markets);
     Ok(respond_html(body))
 }
 

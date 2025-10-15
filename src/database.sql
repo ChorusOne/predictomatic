@@ -119,6 +119,10 @@ update accounts
 
 -- @end create_transfer
 
+-- Return the slug of every market.
+-- @query get_market_slugs() ->* str
+select slug from markets;
+
 -- @query get_market_by_slug(slug: str) ->? Market
 select
     id          -- :i64

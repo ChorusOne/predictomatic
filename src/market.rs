@@ -29,18 +29,18 @@ impl From<OutcomeId> for AssetId {
     }
 }
 
-struct Outcome {
-    id: OutcomeId,
-    value: String,
+pub struct Outcome {
+    pub id: OutcomeId,
+    pub value: String,
 }
 
-struct Market {
-    id: MarketId,
-    slug: String,
-    title: String,
-    description: String,
-    kind: MarketKind,
-    outcomes: Vec<Outcome>,
+pub struct Market {
+    pub id: MarketId,
+    pub slug: String,
+    pub title: String,
+    pub description: String,
+    pub kind: MarketKind,
+    pub outcomes: Vec<Outcome>,
 }
 
 pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Market>> {

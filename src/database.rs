@@ -372,6 +372,26 @@ pub fn create_transfer(
     Ok(result)
 }
 
+/// Return the slug of every market.
+pub fn get_market_slugs<'i, 't, 'a>(
+    tx: &'i mut Transaction<'t, 'a>,
+) -> Result<Iter<'i, 'a, String>> {
+    let sql = r#"
+        select slug from markets;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    let decode_row = |statement: &Statement| Ok(statement.read(0)?);
+    let result = Iter {
+        statement,
+        decode_row,
+    };
+    Ok(result)
+}
+
 #[derive(Debug)]
 pub struct Market {
     pub id: i64,
