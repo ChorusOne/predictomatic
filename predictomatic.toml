@@ -1,5 +1,5 @@
 [server]
-listen = "127.0.0.1:5591"
+listen = "127.0.0.1:5639"
 prefix = "/predict"
 
 [database]
