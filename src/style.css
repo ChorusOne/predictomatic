@@ -59,7 +59,7 @@ h2 {
     font-weight: 800;
 }
 
-ol, ul, ol + p, ol + form, ul + p {
+ol, ul, ol + p, ol + form, ul + p, p + details {
     margin-top: 1rem;
 }
 
@@ -148,6 +148,13 @@ details label input {
     position: absolute;
     left: 12rem;
     width: calc(100% - 12rem);
+}
+
+.order label input {
+    margin-left: 0.5rem;
+    width: 5rem;
+    font-size: 0.9rem;
+    line-height: 1rem;
 }
 
 input.nonzero {

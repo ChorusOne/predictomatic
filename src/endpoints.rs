@@ -204,6 +204,27 @@ fn view_market(ctx: &Context, market: &mkt::Market) -> Markup {
             p {
                 (market.description)
             }
+            details {
+                summary { "Deposit" }
+                p {
+                    "In order to participate in a market, "
+                    "you need to deposit points. "
+                    "Your points remain locked in the market until it resolves. "
+                }
+                form method="post" class="order" {
+                    label {
+                        "Points: "
+                        input
+                          name="amount"
+                          type="number"
+                          min="0"
+                          max=(ctx.user_points)
+                          step="any"
+                          value="10.0";
+                    }
+                    button type="submit" { "Deposit" }
+                }
+            }
         }
     }
 }
