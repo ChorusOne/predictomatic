@@ -13,7 +13,7 @@ use tiny_http::Header;
 
 use crate::config::Config;
 use crate::database as db;
-use crate::finance as fin;
+use crate::finance::{self as fin, AssetId};
 use crate::market as mkt;
 use crate::{Response, User};
 
@@ -139,6 +139,13 @@ impl<'a> Context<'a> {
         };
         Ok(ctx)
     }
+
+    pub fn market_url(&self, market: &mkt::Market, suffix: &str) -> String {
+        format!(
+            "{}/market/{}{}",
+            self.config.server.prefix, market.slug, suffix
+        )
+    }
 }
 
 fn view_header(ctx: &Context) -> Markup {
@@ -168,10 +175,11 @@ fn view_index(ctx: &Context, markets: &[mkt::Market]) -> Markup {
                 section {
                     h1 { "Markets" }
                     @for market in markets {
-                        @let market_url = format!("{}/market/{}", ctx.config.server.prefix, market.slug);
                         div class="market" {
                             h2 {
-                                a href=(market_url) { (market.title) }
+                                a href=(ctx.market_url(market, "")) {
+                                    (market.title)
+                                }
                             }
                             p {
                                 "TODO: Add a summary of the prediction here."
@@ -216,6 +224,10 @@ fn view_market(ctx: &Context, market: &mkt::Market) -> Markup {
                     p { "I need to summarize the prediction here." }
                     h2 { "Resolution criteria" }
                     p { (market.description) }
+                    h2 { "Participants" }
+                    p { "I could show a table here of participants, ranked by volume and PnL." }
+                    h2 { "Activity" }
+                    p { "I could show a log of trades and comments here." }
                 }
                 aside {
                     table {
@@ -257,7 +269,7 @@ fn view_market(ctx: &Context, market: &mkt::Market) -> Markup {
                         }
                     }
                     h3 { "Deposit" }
-                    form method="post" class="order" {
+                    form method="post" action=(ctx.market_url(market, "/deposit")) {
                         label {
                             "Amount "
                             input
@@ -290,6 +302,34 @@ pub fn handle_market(
 
     let body = view_market(&ctx, &market);
     Ok(respond_html(body))
+}
+
+pub fn handle_deposit(
+    config: &Config,
+    tx: &mut db::Transaction,
+    user: &User,
+    market_slug: &str,
+    body: &str,
+) -> db::Result<Response> {
+    let ctx = Context::new(config, user, tx)?;
+    let market = match mkt::get_market_by_slug(tx, market_slug)? {
+        None => return Ok(not_found("No such market exists.")),
+        Some(market) => market,
+    };
+
+    let mut amount = AssetId::POINTS.zero();
+
+    for (key, value) in form_urlencoded::parse(body.as_bytes()) {
+        match key.as_ref() {
+            "amount" => match AssetId::POINTS.parse_amount(value.as_ref()) {
+                None => return Ok(bad_request("Invalid amount.")),
+                Some(n) => amount = n,
+            },
+            _ => return Ok(bad_request("Unexpected form data.")),
+        }
+    }
+
+    Ok(redirect_see_other(ctx.market_url(&market, "")))
 }
 
 /// Validate user inputs against length limits and Unicode subset.

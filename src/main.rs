@@ -140,7 +140,9 @@ fn handle_request(
     with_transaction(connection, |tx| {
         if request.method() == &Method::Post {
             match &path_segments[..] {
-                ["predict"] => unimplemented!("TODO: Handle a trade."),
+                ["market", market_slug, "deposit"] => {
+                    endpoints::handle_deposit(config, tx, &user, market_slug, &body)
+                }
                 _ => Ok(not_found("Not found.")),
             }
         } else {

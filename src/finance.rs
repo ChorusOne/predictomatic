@@ -17,7 +17,7 @@ type Result<T> = db::Result<T>;
 #[derive(Copy, Clone, Debug)]
 pub struct MarketId(pub i64);
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AssetId(pub i64);
 
 #[derive(Copy, Clone, Debug)]
@@ -29,24 +29,60 @@ impl MarketId {
     /// All accounts that hold assets are related to a market, except for an
     /// owner global points balance. We represent that as a market anyway, to
     /// make things more uniform.
-    const NONE: MarketId = MarketId(0);
+    pub const NONE: MarketId = MarketId(0);
 }
 
 impl AssetId {
     /// The asset id for the native asset ("points").
-    const POINTS: AssetId = AssetId(0);
+    pub const POINTS: AssetId = AssetId(0);
 }
 
 impl AccountId {
     /// The account id for the system's points account.
-    const SYSTEM_POINTS: AccountId = AccountId(0, AssetId::POINTS);
+    pub const SYSTEM_POINTS: AccountId = AccountId(0, AssetId::POINTS);
 }
 
 /// An amount of a given asset.
 ///
 /// The integer represents a micro-increment of the asset, i.e. 10^-6.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Amount(i64, AssetId);
+
+impl AssetId {
+    pub fn zero(&self) -> Amount {
+        Amount(0, *self)
+    }
+
+    pub fn parse_amount(&self, s: &str) -> Option<Amount> {
+        use std::str::FromStr;
+
+        let mut parts = s.split('.');
+        let integral = i64::from_str(parts.next()?).ok()?;
+
+        let fractional = match parts.next() {
+            // No fractional part.
+            None => 0,
+            // The input is more precise than we can handle.
+            Some(frac_str) if frac_str.len() > 6 => return None,
+            // We have decimals, scale to micros.
+            Some(frac_str) => {
+                let frac_int = i64::from_str(frac_str).ok()?;
+                frac_int * 10_i64.pow(6 - frac_str.len() as u32)
+            }
+        };
+
+        if parts.next().is_some() {
+            // We expect at most two one decimal point, so two parts.
+            // If there is a third part, the input is invalid.
+            return None;
+        }
+
+        Some(Amount(
+            integral * 1_000_000 + fractional * integral.signum(),
+            *self,
+        ))
+    }
+}
 
 impl fmt::Display for Amount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -142,5 +178,44 @@ mod test {
         assert_eq!(format!("{x}"), "-123.000789");
         assert_eq!(format!("{x:.3}"), "-123.001");
         assert_eq!(format!("{x:.1}"), "-123.0");
+    }
+
+    #[test]
+    fn asset_id_parse_amount_works() {
+        assert_eq!(
+            AssetId::POINTS.parse_amount("1"),
+            Some(Amount(1_000_000, AssetId::POINTS))
+        );
+        assert_eq!(
+            AssetId::POINTS.parse_amount("1.0"),
+            Some(Amount(1_000_000, AssetId::POINTS))
+        );
+        assert_eq!(
+            AssetId::POINTS.parse_amount("1.2"),
+            Some(Amount(1_200_000, AssetId::POINTS))
+        );
+        assert_eq!(
+            AssetId::POINTS.parse_amount("1.02"),
+            Some(Amount(1_020_000, AssetId::POINTS))
+        );
+        assert_eq!(
+            AssetId::POINTS.parse_amount("1.000123"),
+            Some(Amount(1_000_123, AssetId::POINTS))
+        );
+        assert_eq!(
+            AssetId::POINTS.parse_amount("-1.2"),
+            Some(Amount(-1_200_000, AssetId::POINTS))
+        );
+        assert_eq!(
+            AssetId::POINTS.parse_amount("-1.02"),
+            Some(Amount(-1_020_000, AssetId::POINTS))
+        );
+        assert_eq!(
+            AssetId::POINTS.parse_amount("-1.000123"),
+            Some(Amount(-1_000_123, AssetId::POINTS))
+        );
+
+        // Too many decimals, should refuse.
+        assert_eq!(AssetId::POINTS.parse_amount("1.0001234"), None);
     }
 }
