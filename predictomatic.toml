@@ -1,16 +1,13 @@
 [server]
 listen = "127.0.0.1:5591"
-prefix = "/hack"
-num_threads = 1
+prefix = "/predict"
 
 [database]
-path = "hackomatic.sqlite3"
+path = "predictomatic.sqlite3"
 
 [app]
 admin_email = "admin@example.com"
 email_suffix = "@example.com"
-max_teams_per_creator = 3
-coins_to_spend = 100
 
 [debug]
 unsafe_default_email = "admin@example.com"

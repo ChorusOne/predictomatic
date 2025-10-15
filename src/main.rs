@@ -1,14 +1,15 @@
-// Hack-o-matic -- A webapp for facilitating remote and on-site hackathons
-// Copyright 2024 Chorus One
+// Predict-o-matic -- A webapp for facilitating internal prediction markets
+// Copyright 2025 Chorus One
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // A copy of the License has been included in the root of the repository.
 
+// Apapted from Hack-o-matic <https://github.com/ChorusOne/hackomatic>.
+// Copyright 2024 Chorus One, licensed Apache 2.0.
+
 use std::io::Cursor;
 use std::str::FromStr;
-use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::Instant;
 
 use tiny_http::{HeaderField, Method, Request, Server};
@@ -22,66 +23,6 @@ mod database;
 mod endpoints;
 
 type Response = tiny_http::Response<Cursor<Vec<u8>>>;
-
-#[derive(Copy, Clone, PartialEq, Eq)]
-enum Phase {
-    Registration,
-    Presentation,
-    Evaluation,
-    Revelation,
-    Celebration,
-}
-
-impl Phase {
-    fn from_str(name: &str) -> Option<Phase> {
-        let result = match name {
-            "registration" => Phase::Registration,
-            "presentation" => Phase::Presentation,
-            "evaluation" => Phase::Evaluation,
-            "revelation" => Phase::Revelation,
-            "celebration" => Phase::Celebration,
-            _ => return None,
-        };
-        Some(result)
-    }
-
-    fn to_str(&self) -> &'static str {
-        match self {
-            Phase::Registration => "registration",
-            Phase::Presentation => "presentation",
-            Phase::Evaluation => "evaluation",
-            Phase::Revelation => "revelation",
-            Phase::Celebration => "celebration",
-        }
-    }
-
-    fn prev(&self) -> Phase {
-        match self {
-            Phase::Registration => Phase::Registration,
-            Phase::Presentation => Phase::Registration,
-            Phase::Evaluation => Phase::Presentation,
-            Phase::Revelation => Phase::Evaluation,
-            Phase::Celebration => Phase::Revelation,
-        }
-    }
-
-    fn next(&self) -> Phase {
-        match self {
-            Phase::Registration => Phase::Presentation,
-            Phase::Presentation => Phase::Evaluation,
-            Phase::Evaluation => Phase::Revelation,
-            Phase::Revelation => Phase::Celebration,
-            Phase::Celebration => Phase::Celebration,
-        }
-    }
-}
-
-fn load_phase(tx: &mut db::Transaction) -> db::Result<Phase> {
-    let result = db::get_current_phase(tx)?
-        .and_then(|p| Phase::from_str(&p))
-        .unwrap_or(Phase::Registration);
-    Ok(result)
-}
 
 fn load_config() -> Config {
     let mut args = std::env::args();
@@ -108,7 +49,7 @@ fn load_config() -> Config {
 fn init_database(raw_connection: &sqlite::Connection) -> db::Result<db::Connection> {
     // Change the database to WAL mode if it wasn't already. Set the busy
     // timeout to 30 milliseconds, so readers and writers can wait for each
-    // other a little bit. We also have a retry loop around the request handler.
+    // other a little bit.
     raw_connection.execute("PRAGMA locking_mode = NORMAL;")?;
     raw_connection.execute("PRAGMA busy_timeout = 30;")?;
     raw_connection.execute("PRAGMA journal_mode = WAL;")?;
@@ -123,22 +64,6 @@ fn init_database(raw_connection: &sqlite::Connection) -> db::Result<db::Connecti
 pub struct User {
     email: String,
     is_admin: bool,
-}
-
-impl User {
-    /// Whether to display the outcome of the vote to the user.
-    ///
-    /// In the revelation phase, only the admin gets to see the
-    /// totals so that people can't run ahead and check who won
-    /// during the ceremony. But afterwards, everybody can check
-    /// at their own pace.
-    fn can_see_outcome(&self, phase: Phase) -> bool {
-        match phase {
-            Phase::Revelation => self.is_admin,
-            Phase::Celebration => true,
-            _ => false,
-        }
-    }
 }
 
 fn handle_request(
@@ -202,13 +127,7 @@ fn handle_request(
     with_transaction(connection, |tx| {
         if request.method() == &Method::Post {
             match url_inner.as_ref() {
-                "/create-team" => endpoints::handle_create_team(config, tx, &user, &body),
-                "/delete-team" => endpoints::handle_delete_team(config, tx, &user, &body),
-                "/leave-team" => endpoints::handle_leave_team(config, tx, &user, &body),
-                "/join-team" => endpoints::handle_join_team(config, tx, &user, &body),
-                "/vote" => endpoints::handle_vote(config, tx, &user, &body),
-                "/prev" => endpoints::handle_phase_prev(config, tx, &user),
-                "/next" => endpoints::handle_phase_next(config, tx, &user),
+                "/predict" => unimplemented!("TODO: Handle a trade."),
                 _ => Ok(not_found("Not found.")),
             }
         } else {
@@ -305,59 +224,24 @@ fn serve_until_error(config: &Config, connection: &mut db::Connection, server: &
 }
 
 fn main() {
-    let config = Arc::new(load_config());
+    let config = load_config();
 
-    let n_threads = config.server.num_threads as usize;
-    let server = Arc::new(Server::http(&config.server.listen).unwrap());
-    let mut guards = Vec::with_capacity(n_threads);
-    let init_mutex = Arc::new(Mutex::new(()));
+    // For now, don't bother making the server multithreaded. See the comment
+    // in Hackomatic for more details, something something SQLite concurrent
+    // writers ...
+    let server = Server::http(&config.server.listen).unwrap();
 
-    // In theory everything should work with more server threads. And it does,
-    // with 2 or 3, but with 4 or more threads, requests frequently get error 5
-    // "database is locked" from SQLite. Printf debugging shows that all
-    // transactions that get started also commit. But still, something is
-    // holding on to the write lock? What's also really strange, it happens
-    // frequently for 4 threads (~1 in 3 requests), while I haven't been able to
-    // reproduce at all with 3 threads. But just to be sure, just do one.
-    assert_eq!(n_threads, 1, "Currently only 1 thread works well.");
+    loop {
+        let raw_connection = sqlite::open(&config.database.path).expect("Failed to open database");
+        let mut connection = init_database(&raw_connection).expect("Failed to initialize database.");
 
-    for _ in 0..n_threads {
-        let server = server.clone();
-        let config = config.clone();
-        let init_mutex = init_mutex.clone();
+        println!(
+            "Serving on http://{}{} ...",
+            config.server.listen, config.server.prefix
+        );
 
-        let guard = thread::spawn(move || {
-            loop {
-                // The database connections need to be opened sequentially, because
-                // SQLite supports only a single writer at a time. If we let all
-                // threads run, then we encounter a "database is locked" error
-                // (error code 5). We do need to open the connection on the server
-                // threads though, we can't do it on the main thread because the
-                // `db::Connection` takes a `&sqlite::Connection`, and the latter
-                // is not `Sync`. So we have to initialize here. Setting the busy
-                // timeout helps but is fragile: on an underpowered VM the timeout
-                // may be insufficient. So mutexes it is.
-                let db_lock = init_mutex.lock().unwrap();
-                let raw_connection =
-                    sqlite::open(&config.database.path).expect("Failed to open database");
-                let mut connection =
-                    init_database(&raw_connection).expect("Failed to initialize database.");
-                std::mem::drop(db_lock);
-
-                // Handle requests until we encounter a database error.
-                // At that point we loop and open a fresh connection.
-                serve_until_error(&config, &mut connection, &server);
-            }
-        });
-        guards.push(guard);
-    }
-
-    println!(
-        "Serving on http://{}{} ...",
-        config.server.listen, config.server.prefix
-    );
-
-    for guard in guards.drain(..) {
-        guard.join().unwrap();
+        // Handle requests until we encounter a database error.
+        // At that point we loop and open a fresh connection.
+        serve_until_error(&config, &mut connection, &server);
     }
 }
