@@ -124,7 +124,6 @@ fn handle_request(
         }
     };
     let path_segments: Vec<_> = url_clone.trim_start_matches('/').split('/').collect();
-    println!("{:?}", path_segments);
 
     // For post requests, read the body. We need to do this once. The handler
     // may be retried, but the body we can only consume once.
