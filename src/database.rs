@@ -82,6 +82,9 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     let sql = r#"
         create table if not exists accounts
         ( id       integer primary key
+          -- 0 for the global accounts (points owned by the user or system), or the id
+          -- of the market for accounts associated with a market.
+        , market_id integer not null
           -- 0 for the native asset (points), or the id of an outcome for
           -- market accounts.
         , asset_id integer not null
@@ -90,8 +93,8 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
         , owner    string not null
           -- Credits minus debits.
         , balance  integer not null
-          -- Every user can have at most one account per asset.
-        , unique (asset_id, owner)
+          -- Every user can have at most one account per asset per market.
+        , unique (market_id, asset_id, owner)
         );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
@@ -186,8 +189,8 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
 
     let sql = r#"
         -- Create the system points account.
-        insert into accounts (id, asset_id, owner, balance)
-          values (0, 0, 'SYSTEM', 0)
+        insert into accounts (id, market_id, asset_id, owner, balance)
+          values (0, 0, 0, 'SYSTEM', 0)
           on conflict do nothing;
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
@@ -202,18 +205,28 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     Ok(result)
 }
 
-/// Return the account id a given (owner, asset_id) pair.
-pub fn get_account_id(tx: &mut Transaction, owner: &str, asset_id: i64) -> Result<Option<i64>> {
+/// Return the account id a given (market_id, asset_id, owner).
+pub fn get_account_id(
+    tx: &mut Transaction,
+    market_id: i64,
+    asset_id: i64,
+    owner: &str,
+) -> Result<Option<i64>> {
     let sql = r#"
-        select id from accounts where owner = :owner and asset_id = :asset_id;
+        select id from accounts
+          where true
+            and (market_id = :market_id)
+            and (asset_id = :asset_id)
+            and (owner = :owner);
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),
         Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
     };
     statement.reset()?;
-    statement.bind(1, owner)?;
+    statement.bind(1, market_id)?;
     statement.bind(2, asset_id)?;
+    statement.bind(3, owner)?;
     let decode_row = |statement: &Statement| Ok(statement.read(0)?);
     let result = match statement.next()? {
         Row => Some(decode_row(statement)?),
@@ -227,11 +240,16 @@ pub fn get_account_id(tx: &mut Transaction, owner: &str, asset_id: i64) -> Resul
     Ok(result)
 }
 
-/// Create a new account for a given (owner, asset_id) pair, return its id.
-pub fn create_account(tx: &mut Transaction, owner: &str, asset_id: i64) -> Result<i64> {
+/// Create a new account for a given (market_id, asset_id, owner), return its id.
+pub fn create_account(
+    tx: &mut Transaction,
+    market_id: i64,
+    asset_id: i64,
+    owner: &str,
+) -> Result<i64> {
     let sql = r#"
-        insert into accounts (owner, asset_id, balance)
-          values (:owner, :asset_id, 0)
+        insert into accounts (market_id, asset_id, owner, balance)
+          values (:market_id, :asset_id, :owner, 0)
           returning id;
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
@@ -239,8 +257,9 @@ pub fn create_account(tx: &mut Transaction, owner: &str, asset_id: i64) -> Resul
         Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
     };
     statement.reset()?;
-    statement.bind(1, owner)?;
+    statement.bind(1, market_id)?;
     statement.bind(2, asset_id)?;
+    statement.bind(3, owner)?;
     let decode_row = |statement: &Statement| Ok(statement.read(0)?);
     let result = match statement.next()? {
         Row => decode_row(statement)?,

@@ -123,16 +123,21 @@ struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn new(config: &'a Config, user: &'a User, tx: &mut db::Transaction) -> db::Result<Context<'a>> {
+    pub fn new(
+        config: &'a Config,
+        user: &'a User,
+        tx: &mut db::Transaction,
+    ) -> db::Result<Context<'a>> {
         let user_points_account = fin::ensure_points_account(tx, &config.app, &user.email)?;
         let user_points = fin::get_account_balance(tx, user_points_account)?;
         let ctx = Context {
-            config, user, user_points,
+            config,
+            user,
+            user_points,
         };
         Ok(ctx)
     }
 }
-
 
 fn view_header(ctx: &Context) -> Markup {
     html! {
@@ -211,7 +216,6 @@ pub fn handle_market(
 ) -> db::Result<Response> {
     let ctx = Context::new(config, user, tx)?;
     let market = match mkt::get_market_by_slug(tx, market_slug)? {
-
         None => return Ok(not_found("No such market exists.")),
         Some(market) => market,
     };

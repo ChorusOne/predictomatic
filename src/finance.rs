@@ -15,10 +15,22 @@ use crate::database::{self as db, Transaction};
 type Result<T> = db::Result<T>;
 
 #[derive(Copy, Clone, Debug)]
+pub struct MarketId(pub i64);
+
+#[derive(Copy, Clone, Debug)]
 pub struct AssetId(pub i64);
 
 #[derive(Copy, Clone, Debug)]
 pub struct AccountId(i64, AssetId);
+
+impl MarketId {
+    /// Market 0 is the global "no market" for points accounts outside of a market.
+    ///
+    /// All accounts that hold assets are related to a market, except for an
+    /// owner global points balance. We represent that as a market anyway, to
+    /// make things more uniform.
+    const NONE: MarketId = MarketId(0);
+}
 
 impl AssetId {
     /// The asset id for the native asset ("points").
@@ -64,26 +76,32 @@ impl fmt::Display for Amount {
 #[derive(Copy, Clone, Debug)]
 pub struct EventId(i64);
 
-/// Ensure that an account exists for the given (owner, asset_id) pair, return its id.
-pub fn ensure_account(tx: &mut Transaction, owner: &str, asset_id: AssetId) -> Result<AccountId> {
-    let id = match db::get_account_id(tx, owner, asset_id.0)? {
+/// Ensure that an account exists for the given (market_id, owner_id, asset_id), return its id.
+pub fn ensure_account(
+    tx: &mut Transaction,
+    market_id: MarketId,
+    asset_id: AssetId,
+    owner: &str,
+) -> Result<AccountId> {
+    let id = match db::get_account_id(tx, market_id.0, asset_id.0, owner)? {
         Some(id) => id,
-        None => db::create_account(tx, owner, asset_id.0)?,
+        None => db::create_account(tx, market_id.0, asset_id.0, owner)?,
     };
     Ok(AccountId(id, asset_id))
 }
 
-/// Ensure that a user has a points account, fund it with the opening balance if needed, return id.
+/// Ensure that a user has a global points account, fund it with the opening balance if needed, return id.
 pub fn ensure_points_account(
     tx: &mut Transaction,
     config: &AppConfig,
     owner: &str,
 ) -> Result<AccountId> {
+    let market_id = MarketId::NONE;
     let asset_id = AssetId::POINTS;
-    let id = match db::get_account_id(tx, owner, asset_id.0)? {
+    let id = match db::get_account_id(tx, market_id.0, asset_id.0, owner)? {
         Some(id) => id,
         None => {
-            let to_account_id = db::create_account(tx, owner, asset_id.0)?;
+            let to_account_id = db::create_account(tx, market_id.0, asset_id.0, owner)?;
             let from_account_id = AccountId::SYSTEM_POINTS.0;
             let event_id = db::create_event(tx, "SYSTEM", "Sign-on bonus")?;
             let amount = config.opening_balance_micropoints;

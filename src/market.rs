@@ -9,13 +9,9 @@
 
 use crate::config::{MarketConfig, MarketKind};
 use crate::database::{self as db, Transaction};
-use crate::finance::AssetId;
+use crate::finance::{AssetId, MarketId};
 
 type Result<T> = db::Result<T>;
-
-#[derive(Copy, Clone, Debug)]
-pub struct MarketId(i64);
-
 #[derive(Copy, Clone, Debug)]
 pub struct OutcomeId(i64, MarketId);
 

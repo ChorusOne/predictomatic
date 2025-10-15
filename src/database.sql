@@ -14,6 +14,9 @@
 -- @begin ensure_schema_exists()
 create table if not exists accounts
 ( id       integer primary key
+  -- 0 for the global accounts (points owned by the user or system), or the id
+  -- of the market for accounts associated with a market.
+, market_id integer not null
   -- 0 for the native asset (points), or the id of an outcome for
   -- market accounts.
 , asset_id integer not null
@@ -22,8 +25,8 @@ create table if not exists accounts
 , owner    string not null
   -- Credits minus debits.
 , balance  integer not null
-  -- Every user can have at most one account per asset.
-, unique (asset_id, owner)
+  -- Every user can have at most one account per asset per market.
+, unique (market_id, asset_id, owner)
 );
 
 -- Events group one or more transfers. We could also call them "transaction",
@@ -63,20 +66,24 @@ create table if not exists outcomes
 );
 
 -- Create the system points account.
-insert into accounts (id, asset_id, owner, balance)
-  values (0, 0, 'SYSTEM', 0)
+insert into accounts (id, market_id, asset_id, owner, balance)
+  values (0, 0, 0, 'SYSTEM', 0)
   on conflict do nothing;
 
 -- @end ensure_schema_exists()
 
--- Return the account id a given (owner, asset_id) pair.
--- @query get_account_id(owner: str, asset_id: i64) ->? i64
-select id from accounts where owner = :owner and asset_id = :asset_id;
+-- Return the account id a given (market_id, asset_id, owner).
+-- @query get_account_id(market_id: i64, asset_id: i64, owner: str) ->? i64
+select id from accounts
+  where true
+    and (market_id = :market_id)
+    and (asset_id = :asset_id)
+    and (owner = :owner);
 
--- Create a new account for a given (owner, asset_id) pair, return its id.
--- @query create_account(owner: str, asset_id: i64) ->1 i64
-insert into accounts (owner, asset_id, balance)
-  values (:owner, :asset_id, 0)
+-- Create a new account for a given (market_id, asset_id, owner), return its id.
+-- @query create_account(market_id: i64, asset_id: i64, owner: str) ->1 i64
+insert into accounts (market_id, asset_id, owner, balance)
+  values (:market_id, :asset_id, :owner, 0)
   returning id;
 
 -- Return the balance for the given account.
