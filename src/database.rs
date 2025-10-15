@@ -131,6 +131,7 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
         , from_account_id integer not null references accounts (id)
         , to_account_id   integer not null references accounts (id)
         , amount          integer not null
+        , check (amount > 0)
         );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
@@ -172,8 +173,165 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
         Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
     };
     statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        -- Create the system points account.
+        insert into accounts (id, asset_id, owner, balance)
+          values (0, 0, 'SYSTEM', 0)
+          on conflict do nothing;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
     let result = match statement.next()? {
         Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Done => (),
+    };
+    Ok(result)
+}
+
+/// Return the account id a given (owner, asset_id) pair.
+pub fn get_account_id(tx: &mut Transaction, owner: &str, asset_id: i64) -> Result<Option<i64>> {
+    let sql = r#"
+        select id from accounts where owner = :owner and asset_id = :asset_id;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, owner)?;
+    statement.bind(2, asset_id)?;
+    let decode_row = |statement: &Statement| Ok(statement.read(0)?);
+    let result = match statement.next()? {
+        Row => Some(decode_row(statement)?),
+        Done => None,
+    };
+    if result.is_some() {
+        if statement.next()? != Done {
+            panic!("Query 'get_account_id' should return at most one row.");
+        }
+    }
+    Ok(result)
+}
+
+/// Create a new account for a given (owner, asset_id) pair, return its id.
+pub fn create_account(tx: &mut Transaction, owner: &str, asset_id: i64) -> Result<i64> {
+    let sql = r#"
+        insert into accounts (owner, asset_id, balance)
+          values (:owner, :asset_id, 0)
+          returning id;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, owner)?;
+    statement.bind(2, asset_id)?;
+    let decode_row = |statement: &Statement| Ok(statement.read(0)?);
+    let result = match statement.next()? {
+        Row => decode_row(statement)?,
+        Done => panic!("Query 'create_account' should return exactly one row."),
+    };
+    if statement.next()? != Done {
+        panic!("Query 'create_account' should return exactly one row.");
+    }
+    Ok(result)
+}
+
+/// Start a new event that can have transfers attached to it, returns its id.
+pub fn create_event(tx: &mut Transaction, created_by: &str, description: &str) -> Result<i64> {
+    let sql = r#"
+        insert into events (created_by, description)
+          values (:created_by, :description)
+          returning id;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, created_by)?;
+    statement.bind(2, description)?;
+    let decode_row = |statement: &Statement| Ok(statement.read(0)?);
+    let result = match statement.next()? {
+        Row => decode_row(statement)?,
+        Done => panic!("Query 'create_event' should return exactly one row."),
+    };
+    if statement.next()? != Done {
+        panic!("Query 'create_event' should return exactly one row.");
+    }
+    Ok(result)
+}
+
+/// Record a transfer between two accounts.
+pub fn create_transfer(
+    tx: &mut Transaction,
+    event_id: i64,
+    from_account_id: i64,
+    to_account_id: i64,
+    amount: i64,
+) -> Result<()> {
+    let sql = r#"
+        insert into transfers (event_id, from_account_id, to_account_id, amount)
+          values (:event_id, :from_account_id, :to_account_id, :amount);
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, event_id)?;
+    statement.bind(2, from_account_id)?;
+    statement.bind(3, to_account_id)?;
+    statement.bind(4, amount)?;
+    match statement.next()? {
+        Row => panic!("Query 'create_transfer' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        update accounts
+          set   balance = balance - amount
+          where account_id = from_account_id;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, event_id)?;
+    statement.bind(2, from_account_id)?;
+    statement.bind(3, to_account_id)?;
+    statement.bind(4, amount)?;
+    match statement.next()? {
+        Row => panic!("Query 'create_transfer' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        update accounts
+          set   balance = balance + amount
+          where account_id = to_account_id;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, event_id)?;
+    statement.bind(2, from_account_id)?;
+    statement.bind(3, to_account_id)?;
+    statement.bind(4, amount)?;
+    let result = match statement.next()? {
+        Row => panic!("Query 'create_transfer' unexpectedly returned a row."),
         Done => (),
     };
     Ok(result)

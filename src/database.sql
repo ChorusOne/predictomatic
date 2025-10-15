@@ -40,6 +40,7 @@ create table if not exists transfers
 , from_account_id integer not null references accounts (id)
 , to_account_id   integer not null references accounts (id)
 , amount          integer not null
+, check (amount > 0)
 );
 
 create table if not exists markets
@@ -54,4 +55,45 @@ create table if not exists outcomes
 , value     string not null
 );
 
+-- Create the system points account.
+insert into accounts (id, asset_id, owner, balance)
+  values (0, 0, 'SYSTEM', 0)
+  on conflict do nothing;
+
 -- @end ensure_schema_exists()
+
+-- Return the account id a given (owner, asset_id) pair.
+-- @query get_account_id(owner: str, asset_id: i64) ->? i64
+select id from accounts where owner = :owner and asset_id = :asset_id;
+
+-- Create a new account for a given (owner, asset_id) pair, return its id.
+-- @query create_account(owner: str, asset_id: i64) ->1 i64
+insert into accounts (owner, asset_id, balance)
+  values (:owner, :asset_id, 0)
+  returning id;
+
+-- Start a new event that can have transfers attached to it, returns its id.
+-- @query create_event(created_by: str, description: str) ->1 i64
+insert into events (created_by, description)
+  values (:created_by, :description)
+  returning id;
+
+-- Record a transfer between two accounts.
+-- @begin create_transfer(
+--   event_id: i64,
+--   from_account_id: i64,
+--   to_account_id: i64,
+--   amount: i64,
+-- )
+insert into transfers (event_id, from_account_id, to_account_id, amount)
+  values (:event_id, :from_account_id, :to_account_id, :amount);
+
+update accounts
+  set   balance = balance - amount
+  where account_id = from_account_id;
+
+update accounts
+  set   balance = balance + amount
+  where account_id = to_account_id;
+
+-- @end create_transfer
