@@ -45,7 +45,10 @@ impl fmt::Display for Amount {
             None => 6,
         };
 
-        debug_assert!(precision <= 6, "Amounts have at most 6 decimal digits of precision.");
+        debug_assert!(
+            precision <= 6,
+            "Amounts have at most 6 decimal digits of precision."
+        );
 
         // Amounts are in micros, so we have 6 decimals by default.
         let integral = self.0 / 1_000_000;

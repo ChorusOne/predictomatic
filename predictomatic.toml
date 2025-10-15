@@ -12,3 +12,17 @@ opening_balance_micropoints = 100_000_000
 
 [debug]
 unsafe_default_email = "admin@example.com"
+
+# The configuration file can contain markets to seed the database. These are
+# primarily intended to make testing in local development easier.
+[[market]]
+slug = "predictomatic-demoable"
+title = "Will the Predict-o-matic be demoable before the end of the hackathon?"
+description = """
+Resolves ‘Yes’ if the at the the hackathon presentations, the Predict-o-matic
+is in a state where:
+1) At least two users at the company are able to open it
+2) They are able to make a prediction on at least one market.
+"""
+kind = "binary"
+outcomes = ["Yes", "No"]

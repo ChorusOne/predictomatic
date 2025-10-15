@@ -46,14 +46,20 @@ create table if not exists transfers
 
 create table if not exists markets
 ( id          integer primary key
+, slug        string  not null
 , created_at  string  not null
+, kind        string  not null
 , title       string  not null
+, description string  not null
+, unique (slug)
+, unique (title)
 );
 
 create table if not exists outcomes
 ( id        integer primary key
 , market_id integer not null references markets (id)
 , value     string not null
+, unique (market_id, value)
 );
 
 -- Create the system points account.
@@ -112,3 +118,45 @@ update accounts
   where id = :to_account_id;
 
 -- @end create_transfer
+
+-- @query get_market_by_slug(slug: str) ->? Market
+select
+    id          -- :i64
+  , slug        -- :str
+  , kind        -- :str
+  , title       -- :str
+  , description -- :str
+from
+  markets
+where
+  slug = :slug;
+
+-- Create a new market, return its id.
+-- @query create_market(slug: str, kind: str, title: str, description: str) ->1 i64
+insert into
+  markets
+  ( created_at
+  , slug
+  , kind
+  , title
+  , description
+  )
+  values
+  ( strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+  , :slug
+  , :kind
+  , :title
+  , :description
+  )
+  returning id;
+
+-- Return the possible outcomes of a given market.
+-- @query get_outcomes(market_id: i64) ->* Outcome
+select id /* :i64 */, value /* :str */ from outcomes
+  where market_id = :market_id;
+
+-- Insert an outcome, return its id.
+-- @query create_outcome(market_id: i64, value: str) ->1 i64
+insert into outcomes (market_id, value)
+  values (:market_id, :value)
+  returning id;

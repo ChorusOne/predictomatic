@@ -21,6 +21,8 @@ pub struct Config {
     pub debug: DebugConfig,
     pub server: ServerConfig,
     pub database: DatabaseConfig,
+    #[serde(default, rename = "market")]
+    pub markets: Vec<MarketConfig>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,4 +62,21 @@ pub struct ServerConfig {
 pub struct DatabaseConfig {
     /// Path to the database file.
     pub path: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub enum MarketKind {
+    #[serde(rename = "binary")]
+    Binary,
+    #[serde(rename = "date")]
+    Date,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MarketConfig {
+    pub slug: String,
+    pub title: String,
+    pub description: String,
+    pub kind: MarketKind,
+    pub outcomes: Vec<String>,
 }

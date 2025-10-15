@@ -147,8 +147,13 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     let sql = r#"
         create table if not exists markets
         ( id          integer primary key
+        , slug        string  not null
         , created_at  string  not null
+        , kind        string  not null
         , title       string  not null
+        , description string  not null
+        , unique (slug)
+        , unique (title)
         );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
@@ -166,6 +171,7 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
         ( id        integer primary key
         , market_id integer not null references markets (id)
         , value     string not null
+        , unique (market_id, value)
         );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
@@ -363,6 +369,160 @@ pub fn create_transfer(
         Row => panic!("Query 'create_transfer' unexpectedly returned a row."),
         Done => (),
     };
+    Ok(result)
+}
+
+#[derive(Debug)]
+pub struct Market {
+    pub id: i64,
+    pub slug: String,
+    pub kind: String,
+    pub title: String,
+    pub description: String,
+}
+
+pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Market>> {
+    let sql = r#"
+        select
+            id
+          , slug
+          , kind
+          , title
+          , description
+        from
+          markets
+        where
+          slug = :slug;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, slug)?;
+    let decode_row = |statement: &Statement| {
+        Ok(Market {
+            id: statement.read(0)?,
+            slug: statement.read(1)?,
+            kind: statement.read(2)?,
+            title: statement.read(3)?,
+            description: statement.read(4)?,
+        })
+    };
+    let result = match statement.next()? {
+        Row => Some(decode_row(statement)?),
+        Done => None,
+    };
+    if result.is_some() {
+        if statement.next()? != Done {
+            panic!("Query 'get_market_by_slug' should return at most one row.");
+        }
+    }
+    Ok(result)
+}
+
+/// Create a new market, return its id.
+pub fn create_market(
+    tx: &mut Transaction,
+    slug: &str,
+    kind: &str,
+    title: &str,
+    description: &str,
+) -> Result<i64> {
+    let sql = r#"
+        insert into
+          markets
+          ( created_at
+          , slug
+          , kind
+          , title
+          , description
+          )
+          values
+          ( strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+          , :slug
+          , :kind
+          , :title
+          , :description
+          )
+          returning id;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, slug)?;
+    statement.bind(2, kind)?;
+    statement.bind(3, title)?;
+    statement.bind(4, description)?;
+    let decode_row = |statement: &Statement| Ok(statement.read(0)?);
+    let result = match statement.next()? {
+        Row => decode_row(statement)?,
+        Done => panic!("Query 'create_market' should return exactly one row."),
+    };
+    if statement.next()? != Done {
+        panic!("Query 'create_market' should return exactly one row.");
+    }
+    Ok(result)
+}
+
+#[derive(Debug)]
+pub struct Outcome {
+    pub id: i64,
+    pub value: String,
+}
+
+/// Return the possible outcomes of a given market.
+pub fn get_outcomes<'i, 't, 'a>(
+    tx: &'i mut Transaction<'t, 'a>,
+    market_id: i64,
+) -> Result<Iter<'i, 'a, Outcome>> {
+    let sql = r#"
+        select id, value from outcomes
+          where market_id = :market_id;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, market_id)?;
+    let decode_row = |statement: &Statement| {
+        Ok(Outcome {
+            id: statement.read(0)?,
+            value: statement.read(1)?,
+        })
+    };
+    let result = Iter {
+        statement,
+        decode_row,
+    };
+    Ok(result)
+}
+
+/// Insert an outcome, return its id.
+pub fn create_outcome(tx: &mut Transaction, market_id: i64, value: &str) -> Result<i64> {
+    let sql = r#"
+        insert into outcomes (market_id, value)
+          values (:market_id, :value)
+          returning id;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, market_id)?;
+    statement.bind(2, value)?;
+    let decode_row = |statement: &Statement| Ok(statement.read(0)?);
+    let result = match statement.next()? {
+        Row => decode_row(statement)?,
+        Done => panic!("Query 'create_outcome' should return exactly one row."),
+    };
+    if statement.next()? != Done {
+        panic!("Query 'create_outcome' should return exactly one row.");
+    }
     Ok(result)
 }
 
