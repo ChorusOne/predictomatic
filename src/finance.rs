@@ -7,6 +7,8 @@
 
 //! Type-safe wrappers for interactions with accounts and ledgers.
 
+use std::fmt;
+
 use crate::config::AppConfig;
 use crate::database::{self as db, Transaction};
 
@@ -33,7 +35,29 @@ impl AccountId {
 /// The integer represents a micro-increment of the asset, i.e. 10^-6.
 /// TODO: Remove the inner pub, expose formatters instead.
 #[derive(Copy, Clone)]
-pub struct Amount(pub i64, AssetId);
+pub struct Amount(i64, AssetId);
+
+impl fmt::Display for Amount {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Unless a different format was selected, print in full precision.
+        let precision = match f.precision() {
+            Some(n) => n,
+            None => 6,
+        };
+
+        debug_assert!(precision <= 6, "Amounts have at most 6 decimal digits of precision.");
+
+        // Amounts are in micros, so we have 6 decimals by default.
+        let integral = self.0 / 1_000_000;
+        let fractional = (self.0 % 1_000_000).abs();
+
+        // Round to the requested number of decimal places.
+        let pow10_trunc = 10_i64.pow(6 - precision as u32);
+        let fractional_trunc = (fractional + pow10_trunc / 2) / pow10_trunc;
+
+        write!(f, "{integral}.{fractional_trunc:>0p$}", p = precision)
+    }
+}
 
 #[derive(Copy, Clone, Debug)]
 pub struct EventId(i64);
@@ -71,4 +95,32 @@ pub fn ensure_points_account(
 pub fn get_account_balance(tx: &mut Transaction, account_id: AccountId) -> Result<Amount> {
     let amount = db::get_account_balance(tx, account_id.0)?;
     Ok(Amount(amount, account_id.1))
+}
+
+#[cfg(test)]
+mod test {
+    use super::{Amount, AssetId};
+
+    #[test]
+    fn amount_display_works() {
+        let x = Amount(123_456_789, AssetId::POINTS);
+        assert_eq!(format!("{x}"), "123.456789");
+        assert_eq!(format!("{x:.3}"), "123.457");
+        assert_eq!(format!("{x:.1}"), "123.5");
+
+        let x = Amount(123_000_789, AssetId::POINTS);
+        assert_eq!(format!("{x}"), "123.000789");
+        assert_eq!(format!("{x:.3}"), "123.001");
+        assert_eq!(format!("{x:.1}"), "123.0");
+
+        let x = Amount(-123_456_789, AssetId::POINTS);
+        assert_eq!(format!("{x}"), "-123.456789");
+        assert_eq!(format!("{x:.3}"), "-123.457");
+        assert_eq!(format!("{x:.1}"), "-123.5");
+
+        let x = Amount(-123_000_789, AssetId::POINTS);
+        assert_eq!(format!("{x}"), "-123.000789");
+        assert_eq!(format!("{x:.3}"), "-123.001");
+        assert_eq!(format!("{x:.1}"), "-123.0");
+    }
 }
