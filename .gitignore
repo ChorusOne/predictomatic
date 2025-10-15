@@ -1,5 +1,8 @@
 /target
-/predictomatic_local.toml
+
+# See the "Development" section in the readme.
+/predictomatic_*.toml
+/Procfile
 
 *.sqlite3
 *.sqlite3-shm

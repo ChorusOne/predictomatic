@@ -45,6 +45,21 @@ available, you can set `debug.unsafe_default_email` to an email address that
 will be used when no `X-Email` header is present. This feature is of course
 unsafe to use in production.
 
+## Development
+
+For local development, it can be helpful to set up multiple configuration files
+configured with different port and debug user, but otherwise sharing the same
+settings, in particular sharing the database. You can even set up auto-reload
+with e.g. [Entr], [Hivemind], and a `Procfile` like this:
+
+```Procfile
+user_a: git ls-files | entr cargo run -- predictomatic_user_a.toml
+user_b: git ls-files | entr cargo run -- predictomatic_user_b.toml
+```
+
+[Entr]:     https://eradman.com/entrproject/
+[Hivemind]: https://github.com/DarthSim/hivemind
+
 ## License
 
 The Predict-o-matic is a fork of the [Hack-o-matic][hackomatic] by Chorus One.
