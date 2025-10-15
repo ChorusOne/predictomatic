@@ -6,7 +6,7 @@
 html {
     font-size: 18px;
 
-    --bg: #cdffac;
+    --bg: #ffe7ac;
     --fg: #111;
     --dp: #f9ffee;
 
@@ -16,7 +16,7 @@ html {
 @media (prefers-color-scheme: dark) {
     html {
         --bg: #111;
-        --fg: #cdffac;
+        --fg: #ffe7ac;
         --dp: #000
     }
 }
