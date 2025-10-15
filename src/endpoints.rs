@@ -321,11 +321,15 @@ pub fn handle_deposit(
     for (key, value) in form_urlencoded::parse(body.as_bytes()) {
         match key.as_ref() {
             "amount" => match AssetId::POINTS.parse_amount(value.as_ref()) {
-                None => return Ok(bad_request("Invalid amount.")),
+                None => return Ok(bad_request("Failed to parse amount.")),
                 Some(n) => amount = n,
             },
             _ => return Ok(bad_request("Unexpected form data.")),
         }
+    }
+
+    if amount <= AssetId::POINTS.zero() {
+        return Ok(bad_request("Amount must be greater than 0."));
     }
 
     model::market_deposit(tx, &market, amount, &user.email)?;

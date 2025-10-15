@@ -95,6 +95,15 @@ impl AccountId {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Amount(i64, AssetId);
 
+impl std::cmp::PartialOrd for Amount {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        // Technically with *partial* cmp we should return `None`, but even
+        // attempting to compare is a bug so we should panic.
+        assert_eq!(self.1, other.1, "Comparing amounts for different assets.");
+        self.0.partial_cmp(&other.0)
+    }
+}
+
 impl fmt::Display for Amount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Unless a different format was selected, print in full precision.
@@ -124,11 +133,44 @@ impl fmt::Display for Amount {
 pub struct EventId(i64);
 
 /// Create a transfer from one account to another.
-pub fn create_transfer(tx: &mut Transaction, event: EventId, from_account: AccountId, to_account: AccountId, amount: Amount) -> Result<()> {
-    assert_eq!(from_account.1, to_account.1, "Asset must be the same for both accounts.");
-    assert_eq!(from_account.1, amount.1, "Asset must be the same for accounts and amount.");
+pub fn create_transfer(
+    tx: &mut Transaction,
+    event: EventId,
+    from_account: AccountId,
+    to_account: AccountId,
+    amount: Amount,
+) -> Result<()> {
+    assert_eq!(
+        from_account.1, to_account.1,
+        "Asset must be the same for both accounts."
+    );
+    assert_eq!(
+        from_account.1, amount.1,
+        "Asset must be the same for accounts and amount."
+    );
     assert!(amount.0 > 0, "Transfer must be positive.");
     db::create_transfer(tx, event.0, from_account.0, to_account.0, amount.0)
+}
+
+/// Constraints on account balance.
+#[derive(Copy, Clone)]
+enum AccountConstraint {
+    /// Zero or positive.
+    Positive,
+    /// No constraints.
+    Any,
+    /// Zero or negative.
+    Negative,
+}
+
+impl AccountConstraint {
+    pub fn min_max_balance(&self) -> (Option<i64>, Option<i64>) {
+        match self {
+            AccountConstraint::Positive => (Some(0), None),
+            AccountConstraint::Any => (None, None),
+            AccountConstraint::Negative => (None, Some(0)),
+        }
+    }
 }
 
 /// Ensure that an account exists for the given (market_id, owner_id, asset_id), return its id.
@@ -137,10 +179,12 @@ pub fn ensure_account(
     market_id: MarketId,
     asset_id: AssetId,
     owner: &str,
+    constraint: AccountConstraint,
 ) -> Result<AccountId> {
+    let (min, max) = constraint.min_max_balance();
     let id = match db::get_account_id(tx, market_id.0, asset_id.0, owner)? {
         Some(id) => id,
-        None => db::create_account(tx, market_id.0, asset_id.0, owner)?,
+        None => db::create_account(tx, market_id.0, asset_id.0, owner, min, max)?,
     };
     Ok(AccountId(id, asset_id))
 }
@@ -156,7 +200,11 @@ pub fn ensure_points_account(
     let id = match db::get_account_id(tx, market_id.0, asset_id.0, owner)? {
         Some(id) => id,
         None => {
-            let to_account = AccountId(db::create_account(tx, market_id.0, asset_id.0, owner)?, asset_id);
+            let (min, max) = AccountConstraint::Positive.min_max_balance();
+            let to_account = AccountId(
+                db::create_account(tx, market_id.0, asset_id.0, owner, min, max)?,
+                asset_id,
+            );
             let from_account = AccountId::SYSTEM_POINTS;
             let event = EventId(db::create_event(tx, "SYSTEM", "Sign-on bonus")?);
             let amount = Amount(config.opening_balance_micropoints, asset_id);
@@ -248,8 +296,9 @@ pub fn market_deposit(
 
     // Move the points from the user's global account, into the user's point
     // account for this market.
-    let acc_global_points = ensure_account(tx, MarketId::NONE, AssetId::POINTS, owner)?;
-    let acc_market_points = ensure_account(tx, market.id, AssetId::POINTS, owner)?;
+    let pos = AccountConstraint::Positive;
+    let acc_global_points = ensure_account(tx, MarketId::NONE, AssetId::POINTS, owner, pos)?;
+    let acc_market_points = ensure_account(tx, market.id, AssetId::POINTS, owner, pos)?;
     create_transfer(tx, event, acc_global_points, acc_market_points, amount)?;
 
     // TODO: Mint the outcome shares.

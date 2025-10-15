@@ -22,20 +22,27 @@ create table if not exists accounts
 , asset_id integer not null
   -- Email address for user-owned accounts, or "SYSTEM" for system-owned
   -- accounts.
-, owner    string not null
+, owner    text not null
   -- Credits minus debits.
 , balance  integer not null
+  -- The minimum allowed balance.
+, min_balance integer null
+  -- The maximum allowed balance.
+, max_balance integer null
   -- Every user can have at most one account per asset per market.
 , unique (market_id, asset_id, owner)
+  -- Balance constraints must be satisfied.
+, check (balance >= min_balance)
+, check (balance <= max_balance)
 );
 
 -- Events group one or more transfers. We could also call them "transaction",
 -- but that's confusing in a database.
 create table if not exists events
 ( id          integer primary key
-, created_at  string not null
-, created_by  string not null
-, description string not null
+, created_at  text not null
+, created_by  text not null
+, description text not null
 );
 
 create table if not exists transfers
@@ -49,11 +56,11 @@ create table if not exists transfers
 
 create table if not exists markets
 ( id          integer primary key
-, slug        string  not null
-, created_at  string  not null
-, kind        string  not null
-, title       string  not null
-, description string  not null
+, slug        text not null
+, created_at  text not null
+, kind        text not null
+, title       text not null
+, description text not null
 , unique (slug)
 , unique (title)
 );
@@ -61,13 +68,17 @@ create table if not exists markets
 create table if not exists outcomes
 ( id        integer primary key
 , market_id integer not null references markets (id)
-, value     string not null
+, value     text not null
 , unique (market_id, value)
 );
 
--- Create the system points account.
-insert into accounts (id, market_id, asset_id, owner, balance)
-  values (0, 0, 0, 'SYSTEM', 0)
+-- Create the system points account. This balance can only go negative, as we
+-- mint points from here.
+insert into
+  accounts
+    (id, market_id, asset_id, owner, balance, min_balance, max_balance)
+  values
+    (0, 0, 0, 'SYSTEM', 0, null, 0)
   on conflict do nothing;
 
 -- @end ensure_schema_exists()
@@ -81,9 +92,18 @@ select id from accounts
     and (owner = :owner);
 
 -- Create a new account for a given (market_id, asset_id, owner), return its id.
--- @query create_account(market_id: i64, asset_id: i64, owner: str) ->1 i64
-insert into accounts (market_id, asset_id, owner, balance)
-  values (:market_id, :asset_id, :owner, 0)
+-- @query create_account(
+--   market_id: i64,
+--   asset_id: i64,
+--   owner: str,
+--   min_balance: i64?,
+--   max_balance: i64?,
+-- ) ->1 i64
+insert into
+  accounts
+    (market_id, asset_id, owner, balance, min_balance, max_balance)
+  values
+    (:market_id, :asset_id, :owner, 0, :min_balance, :max_balance)
   returning id;
 
 -- Return the balance for the given account.
