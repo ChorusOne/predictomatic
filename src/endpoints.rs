@@ -8,7 +8,7 @@
 // Apapted from Hack-o-matic <https://github.com/ChorusOne/hackomatic>.
 // Copyright 2024 Chorus One, licensed Apache 2.0.
 
-use maud::{html, Markup, DOCTYPE};
+use maud::{DOCTYPE, Markup, html};
 use tiny_http::Header;
 
 use crate::config::Config;
@@ -97,8 +97,8 @@ fn get_stylesheet() -> Markup {
 // Same for the script.
 #[cfg(debug_assertions)]
 fn get_predict_script() -> Markup {
-    let data =
-        std::fs::read_to_string("src/predict.js").expect("Need to run from repo root in debug mode.");
+    let data = std::fs::read_to_string("src/predict.js")
+        .expect("Need to run from repo root in debug mode.");
     maud::PreEscaped(data)
 }
 
@@ -113,7 +113,6 @@ fn view_email<'a>(config: &Config, email: &'a str) -> &'a str {
         None => email,
     }
 }
-
 
 fn view_index(config: &Config, user: &User) -> Markup {
     html! {

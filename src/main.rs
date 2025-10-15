@@ -90,7 +90,7 @@ fn handle_request(
             None => {
                 return Ok(
                     Response::from_string("Missing authentication header.").with_status_code(401)
-                )
+                );
             }
         },
     };
@@ -108,7 +108,7 @@ fn handle_request(
             return Ok(not_found(format!(
                 "Not found, try {}",
                 config.server.prefix
-            )))
+            )));
         }
     };
 
@@ -233,7 +233,8 @@ fn main() {
 
     loop {
         let raw_connection = sqlite::open(&config.database.path).expect("Failed to open database");
-        let mut connection = init_database(&raw_connection).expect("Failed to initialize database.");
+        let mut connection =
+            init_database(&raw_connection).expect("Failed to initialize database.");
 
         println!(
             "Serving on http://{}{} ...",
