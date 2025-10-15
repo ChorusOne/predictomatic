@@ -21,6 +21,7 @@ use endpoints::{internal_error, not_found, service_unavailable};
 mod config;
 mod database;
 mod endpoints;
+mod finance;
 
 type Response = tiny_http::Response<Cursor<Vec<u8>>>;
 
@@ -94,6 +95,12 @@ fn handle_request(
             }
         },
     };
+
+    // In the database, owner columns rely on the fact that SYSTEM is a reserved name.
+    assert_ne!(
+        email, "SYSTEM",
+        "SYSTEM is a reserved name, it cannot be used by users."
+    );
 
     *log_line = format!("{:4?} {} {}", request.method(), request.url(), email);
 

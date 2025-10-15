@@ -30,6 +30,9 @@ pub struct AppConfig {
 
     /// The suffix to remove from user emails when listing them.
     pub email_suffix: String,
+
+    /// The opening balance of new users, in 10^-6 points.
+    pub opening_balance_micropoints: i64,
 }
 
 #[derive(Debug, Default, Deserialize)]

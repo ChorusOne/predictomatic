@@ -8,7 +8,8 @@
 -- Apapted from Hack-o-matic <https://github.com/ChorusOne/hackomatic>.
 -- Copyright 2024 Chorus One, licensed Apache 2.0.
 
--- To be used with https://github.com/ruuda/squiller v0.5.0
+-- To be used with <https://github.com/ruuda/squiller>, you need commit
+-- c83d64f644805e70 or later.
 
 -- @begin ensure_schema_exists()
 create table if not exists accounts
@@ -72,10 +73,23 @@ insert into accounts (owner, asset_id, balance)
   values (:owner, :asset_id, 0)
   returning id;
 
+-- Return the balance for the given account.
+-- @query get_account_balance(account_id: i64) ->1 i64
+select balance from accounts where id = :account_id;
+
 -- Start a new event that can have transfers attached to it, returns its id.
 -- @query create_event(created_by: str, description: str) ->1 i64
-insert into events (created_by, description)
-  values (:created_by, :description)
+insert into
+  events
+  ( created_at
+  , created_by
+  , description
+  )
+  values
+  ( strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+  , :created_by
+  , :description
+  )
   returning id;
 
 -- Record a transfer between two accounts.
@@ -89,11 +103,12 @@ insert into transfers (event_id, from_account_id, to_account_id, amount)
   values (:event_id, :from_account_id, :to_account_id, :amount);
 
 update accounts
-  set   balance = balance - amount
-  where account_id = from_account_id;
+  set   balance = balance - :amount
+  where (id = :from_account_id)
+    and (:to_account_id is not null) and (:amount > 0);
 
 update accounts
-  set   balance = balance + amount
-  where account_id = to_account_id;
+  set   balance = balance + :amount
+  where id = :to_account_id;
 
 -- @end create_transfer

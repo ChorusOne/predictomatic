@@ -13,6 +13,7 @@ use tiny_http::Header;
 
 use crate::config::Config;
 use crate::database as db;
+use crate::finance as fin;
 use crate::{Response, User};
 
 fn respond_html(markup: Markup) -> Response {
@@ -114,7 +115,7 @@ fn view_email<'a>(config: &Config, email: &'a str) -> &'a str {
     }
 }
 
-fn view_index(config: &Config, user: &User) -> Markup {
+fn view_index(config: &Config, user: &User, balance: fin::Amount) -> Markup {
     html! {
         (view_html_head("Predict-o-matic"))
         body {
@@ -122,7 +123,8 @@ fn view_index(config: &Config, user: &User) -> Markup {
                 "Predict-o-matic"
             }
             p {
-                "Welcome to the prediction market, " (user.email) "."
+                "Welcome to the prediction market, " (user.email) ". "
+                "You have " (balance.0) " micropoints."
             }
         }
     }
@@ -133,7 +135,10 @@ pub fn handle_index(
     tx: &mut db::Transaction,
     user: &User,
 ) -> db::Result<Response> {
-    let body = view_index(config, &user);
+    let user_points_account = fin::ensure_points_account(tx, &config.app, &user.email)?;
+    let balance = fin::get_account_balance(tx, user_points_account)?;
+
+    let body = view_index(config, &user, balance);
     Ok(respond_html(body))
 }
 
