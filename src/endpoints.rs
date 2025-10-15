@@ -124,7 +124,7 @@ fn view_index(config: &Config, user: &User, balance: fin::Amount) -> Markup {
             }
             p {
                 "Welcome to the prediction market, " (user.email) ". "
-                "You have " (balance) " points."
+                "You have " (format!("{balance:.2}")) " points."
             }
         }
     }

@@ -53,8 +53,8 @@ settings, in particular sharing the database. You can even set up auto-reload
 with e.g. [Entr], [Hivemind], and a `Procfile` like this:
 
 ```Procfile
-user_a: git ls-files | entr cargo run -- predictomatic_user_a.toml
-user_b: git ls-files | entr cargo run -- predictomatic_user_b.toml
+user_a: git ls-files | entr -r cargo run -- predictomatic_user_a.toml
+user_b: git ls-files | entr -r cargo run -- predictomatic_user_b.toml
 ```
 
 [Entr]:     https://eradman.com/entrproject/
