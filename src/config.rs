@@ -8,7 +8,9 @@
 // Apapted from Hack-o-matic <https://github.com/ChorusOne/hackomatic>.
 // Copyright 2024 Chorus One, licensed Apache 2.0.
 
-use serde::{self, Deserialize};
+use std::fmt;
+
+use serde::{self, Deserialize, Serialize};
 
 /// Application configuration.
 ///
@@ -64,12 +66,18 @@ pub struct DatabaseConfig {
     pub path: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum MarketKind {
     #[serde(rename = "binary")]
     Binary,
     #[serde(rename = "date")]
     Date,
+}
+
+impl fmt::Display for MarketKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.serialize(f)
+    }
 }
 
 #[derive(Debug, Deserialize)]

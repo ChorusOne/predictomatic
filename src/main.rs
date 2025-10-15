@@ -22,6 +22,7 @@ mod config;
 mod database;
 mod endpoints;
 mod finance;
+mod market;
 
 type Response = tiny_http::Response<Cursor<Vec<u8>>>;
 
@@ -47,7 +48,10 @@ fn load_config() -> Config {
     }
 }
 
-fn init_database(raw_connection: &sqlite::Connection) -> db::Result<db::Connection> {
+fn init_database<'conn>(
+    raw_connection: &'conn sqlite::Connection,
+    markets: &[config::MarketConfig],
+) -> db::Result<db::Connection<'conn>> {
     // Change the database to WAL mode if it wasn't already. Set the busy
     // timeout to 30 milliseconds, so readers and writers can wait for each
     // other a little bit.
@@ -58,6 +62,7 @@ fn init_database(raw_connection: &sqlite::Connection) -> db::Result<db::Connecti
     let mut connection = db::Connection::new(raw_connection);
     let mut tx = connection.begin()?;
     db::ensure_schema_exists(&mut tx)?;
+    market::ensure_markets(&mut tx, markets)?;
     tx.commit()?;
     Ok(connection)
 }
@@ -240,8 +245,8 @@ fn main() {
 
     loop {
         let raw_connection = sqlite::open(&config.database.path).expect("Failed to open database");
-        let mut connection =
-            init_database(&raw_connection).expect("Failed to initialize database.");
+        let mut connection = init_database(&raw_connection, &config.markets)
+            .expect("Failed to initialize database.");
 
         println!(
             "Serving on http://{}{} ...",

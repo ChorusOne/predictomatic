@@ -15,7 +15,7 @@ use crate::database::{self as db, Transaction};
 type Result<T> = db::Result<T>;
 
 #[derive(Copy, Clone, Debug)]
-pub struct AssetId(i64);
+pub struct AssetId(pub i64);
 
 #[derive(Copy, Clone, Debug)]
 pub struct AccountId(i64, AssetId);
@@ -33,7 +33,6 @@ impl AccountId {
 /// An amount of a given asset.
 ///
 /// The integer represents a micro-increment of the asset, i.e. 10^-6.
-/// TODO: Remove the inner pub, expose formatters instead.
 #[derive(Copy, Clone)]
 pub struct Amount(i64, AssetId);
 
