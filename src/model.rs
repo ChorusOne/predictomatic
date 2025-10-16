@@ -310,14 +310,14 @@ impl Distribution {
         // Higher values make it harder to change the price.
         // For now we hard-code it to 10.0.
         // Need to keep in sync with js.
-        let pool_b: f64 = 10.0;
+        let param_b: f64 = 41.5;
 
         let mut logits: Vec<f64> = balance
             .outcomes
             .iter()
             // The points are stored as micros, correct for that to not blow up
             // the exps below.
-            .map(|oc| -(oc.0 as f64) * 1e-6 / pool_b)
+            .map(|oc| -(oc.0 as f64) * 1e-6 / param_b)
             .collect();
 
         // In principle this is it, but when we convert to probability, we take

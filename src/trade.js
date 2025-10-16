@@ -1,5 +1,7 @@
 // How difficult is it to change the market price?
-const marketB = 10.0;
+// For a value of 41.5, one can change the market from 50/50 to 85% by selling
+// 50 YES shares, half the starting balance. I think that's reasonable?
+const marketB = 41.5;
 
 // This value remains invariant under swaps against the pool, so we can compute
 // it once at the start.
