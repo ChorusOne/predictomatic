@@ -214,6 +214,7 @@ pub fn handle_index(
 
 fn view_market(ctx: &Context, market: &Market) -> Markup {
     let default_deposit = AssetId::POINTS.micros(10_000_000).min(ctx.user_points);
+    let total_deposited = market.total_deposited();
 
     html! {
         (view_html_head("Predict-o-matic"))
@@ -233,8 +234,8 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                 aside {
                     table {
                         tr {
-                            td { "Deposited" }
-                            td class="num" { "$\u{200a}0.00" }
+                            td { "Liquidity" }
+                            td class="num" { (format!("$\u{200a}{total_deposited:.2}")) }
                         }
                         tr {
                             td { "Yes" }

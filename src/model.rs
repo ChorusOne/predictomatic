@@ -108,6 +108,15 @@ impl Amount {
     }
 }
 
+impl std::ops::Add for Amount {
+    type Output = Amount;
+    fn add(self, rhs: Amount) -> Amount {
+        assert_eq!(self.1, rhs.1, "Can only add amounts for the same asset.");
+        // Always check for overflow, not just in debug mode.
+        Amount(self.0.checked_add(rhs.0).unwrap(), self.1)
+    }
+}
+
 impl std::cmp::PartialOrd for Amount {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         // Technically with *partial* cmp we should return `None`, but even
@@ -278,6 +287,17 @@ pub struct Market {
 
     /// For every owner, their balance for this market.
     pub balances: HashMap<String, Balance>,
+}
+
+impl Market {
+    /// Return the amount of points deposited into this market.
+    pub fn total_deposited(&self) -> Amount {
+        let mut sum = AssetId::POINTS.zero();
+        for b in self.balances.values() {
+            sum = sum + b.points;
+        }
+        sum
+    }
 }
 
 pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Market>> {
