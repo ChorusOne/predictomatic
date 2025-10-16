@@ -26,4 +26,4 @@ is in a state where:
 """
 kind = "binary"
 outcomes = ["Yes", "No"]
-fund_micros = 10_000_000
+fund_micros = 150_000_000

@@ -19,6 +19,8 @@ const pMin = Math.exp(-max0 / marketB) / invariant;
 const max1 = systemBalance[1] + userBalance[1];
 const pMax = 1.0 - Math.exp(-max1 / marketB) / invariant;
 
+const canTrade = pMax - pMin > 0.001;
+
 function getProbability(balance) {
     const ps = balance.map(lk => Math.exp(-lk / marketB));
     return ps[0] / invariant;
@@ -41,8 +43,10 @@ function getTrade(p) {
         const buyYes = (-dYes).toFixed(2);
         const sellNo = dNo.toFixed(2);
         offerElem.innerText = `Trade offer: ${buyYes} Yes for ${sellNo} No.`;
-    } else {
+    } else if (canTrade) {
         offerElem.innerText = "Move the slider to receive a trade offer.";
+    } else {
+        offerElem.innerText = "To participate in this market, first deposit some funds on the right.";
     }
 
     console.log(p, newYes, newNo, getProbability([newYes, newNo]));
