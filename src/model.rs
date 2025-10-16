@@ -306,13 +306,18 @@ pub struct Distribution {
 impl Distribution {
     /// Turn AMM pool balances into a probability distribution.
     pub fn from_pool(balance: &Balance) -> Distribution {
-        // TODO: What about the proportionality constant?
+        // TODO: Make the "B" parameter configurable per market.
+        // Higher values make it harder to change the price.
+        // For now we hard-code it to 10.0.
+        // Need to keep in sync with js.
+        let pool_b: f64 = 10.0;
+
         let mut logits: Vec<f64> = balance
             .outcomes
             .iter()
             // The points are stored as micros, correct for that to not blow up
             // the exps below.
-            .map(|oc| -(oc.0 as f64) * 1e-6)
+            .map(|oc| -(oc.0 as f64) * 1e-6 / pool_b)
             .collect();
 
         // In principle this is it, but when we convert to probability, we take

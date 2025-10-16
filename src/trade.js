@@ -1,31 +1,32 @@
+// How difficult is it to change the market price?
+const marketB = 10.0;
+
+// This value remains invariant under swaps against the pool, so we can compute
+// it once at the start.
+const invariant = systemBalance
+    .map(lk => Math.exp(-lk / marketB))
+    .reduce((acc, p) => acc + p, 0.0);
+
+// The maximum probability for outcome 0, is when we'd sell all user shares
+// to the pool.
+const max0 = systemBalance[0] + userBalance[0];
+const pMin = Math.exp(-max0 / marketB) / invariant;
+
+// Same for outcome 1, and for a binary question, that gives us the maximum
+// probability we can afford to buy.
+const max1 = systemBalance[1] + userBalance[1];
+const pMax = 1.0 - Math.exp(-max1 / marketB) / invariant;
+
 function getProbability(balance) {
-    const ps = balance.map(lk => Math.exp(-lk));
-    const sum = ps.reduce((acc, x) => acc + x, 0.0);
-    // For binary questions, outcome 0 is the one we are interested in.
-    return ps[0] / sum;
+    const ps = balance.map(lk => Math.exp(-lk / marketB));
+    return ps[0] / invariant;
 }
 
 // Return the delta in pool shares to bring the implied probability to `p`.
 function getTrade(p) {
-    // Comput the current value of the invariant. Whatever we swap, the
-    // invariant must remain the same.
-    const ps = systemBalance.map(lk => Math.exp(-lk));
-    const invariant = ps.reduce((acc, x) => acc + x, 0.0);
-
-    // const targetDiff = Math.log(p / (1.0 - p));
-    // const balanceYesNew = -Math.log(invariant / (1 + Math.exp(-targetDiff)));
-    // const balanceNew = [balanceYesNew, balanceYesNew + targetDiff];
-
-    const newYes = -Math.log(p * invariant);
-    const newNo = -Math.log(invariant - Math.exp(-newYes));
-    // Equivalent:
-    const newNo2 = -Math.log(invariant - p * invariant);
-    // Equivalent:
-    const newNo3 = -Math.log(invariant * (1.0 - p));
-
-    const p2 = getProbability([newYes, newNo3]);
-
-    console.log(p, newYes, newNo, newNo2, newNo3, p2);
+    const newYes = -Math.log(invariant * p) * marketB;
+    const newNo = -Math.log(invariant * (1.0 - p)) * marketB;
+    console.log(p, newYes, newNo, getProbability([newYes, newNo]));
 }
 
 function initializeSlider() {
@@ -63,7 +64,11 @@ function initializeSlider() {
     const onDragMove = (event) => {
         const dx = event.clientX - startX;
         const rx = (knobRect.left + 0.5 * knobRect.width - hrRect.left + dx) / hrRect.width;
-        const rxClamp = Math.max(0.001, Math.min(0.999, rx));
+        // Clamp to [0.1%, 99.9%], or what the user can afford, whichever is
+        // narrower.
+        const min = Math.max(pMin, 0.001);
+        const max = Math.min(pMax, 0.999);
+        const rxClamp = Math.max(min, Math.min(max, rx));
         positionSlider(rxClamp);
     };
     const onDragEnd = (event) => {
