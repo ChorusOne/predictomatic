@@ -296,6 +296,8 @@ fn view_prediction_binary(market: &Market, ps: &[f64]) -> Markup {
     html! {
         div #trade-widget .slider {
             hr;
+            span .tmarket {}
+            span .tuser {}
             span .percentage .pmarket { (percentage) }
             span .percentage .puser { (percentage) }
             span .knob {}
