@@ -7,6 +7,7 @@
 
 //! Type-safe wrappers for interactions with accounts and ledgers.
 
+use std::collections::HashMap;
 use std::fmt;
 
 use crate::config::{AppConfig, MarketConfig, MarketKind};
@@ -255,6 +256,18 @@ pub struct Outcome {
     pub value: String,
 }
 
+/// The balances of accounts related to a market for a given owner.
+///
+/// The owner can be a user, or it can be the system.
+#[derive(Clone, Debug)]
+pub struct Balance {
+    /// For every outcome in the market, in the same order, the balance.
+    outcomes: Vec<Amount>,
+
+    /// Balance of the points account.
+    points: Amount,
+}
+
 pub struct Market {
     pub id: MarketId,
     pub slug: String,
@@ -262,6 +275,9 @@ pub struct Market {
     pub description: String,
     pub kind: MarketKind,
     pub outcomes: Vec<Outcome>,
+
+    /// For every owner, their balance for this market.
+    pub balances: HashMap<String, Balance>,
 }
 
 pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Market>> {
@@ -283,6 +299,35 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
         });
     }
 
+    let mut balances = HashMap::new();
+    let mut default_balance = Balance {
+        outcomes: outcomes
+            .iter()
+            .map(|oc| AssetId::from(oc.id).zero())
+            .collect(),
+        points: AssetId::POINTS.zero(),
+    };
+
+    for res_account in db::get_market_accounts(tx, market.id)? {
+        let account = res_account?;
+        let balance = balances
+            .entry(account.owner)
+            .or_insert_with(|| default_balance.clone());
+        match account.asset_id {
+            0 => balance.points.0 = account.balance,
+            k => {
+                // TODO: I should really use named fields rather than anonymous
+                // tuples, this b.1.0 is ridiculous.
+                let b = balance
+                    .outcomes
+                    .iter_mut()
+                    .find(|b| b.1.0 == k)
+                    .expect("We have an account, the oucome must exist.");
+                b.0 = account.balance;
+            }
+        }
+    }
+
     Ok(Some(Market {
         id: market_id,
         slug: market.slug,
@@ -290,6 +335,7 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
         description: market.description,
         kind,
         outcomes,
+        balances,
     }))
 }
 

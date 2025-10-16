@@ -191,3 +191,15 @@ select id /* :i64 */, value /* :str */ from outcomes
 insert into outcomes (market_id, value)
   values (:market_id, :value)
   returning id;
+
+-- Return balances of all accounts related to the given market.
+-- @query get_market_accounts(market_id: i64) ->* Account
+select
+    id       -- :i64
+  , asset_id -- :i64
+  , owner    -- :str
+  , balance  -- :i64
+from
+  accounts
+where
+  market_id = :market_id;

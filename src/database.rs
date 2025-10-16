@@ -583,6 +583,51 @@ pub fn create_outcome(tx: &mut Transaction, market_id: i64, value: &str) -> Resu
     Ok(result)
 }
 
+#[derive(Debug)]
+pub struct Account {
+    pub id: i64,
+    pub asset_id: i64,
+    pub owner: String,
+    pub balance: i64,
+}
+
+/// Return balances of all accounts related to the given market.
+pub fn get_market_accounts<'i, 't, 'a>(
+    tx: &'i mut Transaction<'t, 'a>,
+    market_id: i64,
+) -> Result<Iter<'i, 'a, Account>> {
+    let sql = r#"
+        select
+            id
+          , asset_id
+          , owner
+          , balance
+        from
+          accounts
+        where
+          market_id = :market_id;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, market_id)?;
+    let decode_row = |statement: &Statement| {
+        Ok(Account {
+            id: statement.read(0)?,
+            asset_id: statement.read(1)?,
+            owner: statement.read(2)?,
+            balance: statement.read(3)?,
+        })
+    };
+    let result = Iter {
+        statement,
+        decode_row,
+    };
+    Ok(result)
+}
+
 // A useless main function, included only to make the example compile with
 // Cargo’s default settings for examples.
 #[allow(dead_code)]
