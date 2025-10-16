@@ -334,6 +334,33 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
     positions.sort_by_key(|pos| std::cmp::Reverse((pos.unrealized_pnl, pos.market_value)));
 
     let our_position = positions.iter().find(|pos| pos.owner == ctx.user.email);
+    let system_position = positions
+        .iter()
+        .find(|pos| pos.owner == "SYSTEM")
+        .expect("System always has a position.");
+
+    // We also feed in the serialized current positions into js.
+    // TODO: Use serde_json or something instead.
+    let balance_user: Vec<String> = match our_position {
+        Some(pos) => pos
+            .balance
+            .outcomes
+            .iter()
+            .map(|oc| oc.to_string())
+            .collect(),
+        None => system_position
+            .balance
+            .outcomes
+            .iter()
+            .map(|_oc| "0.0".to_string())
+            .collect(),
+    };
+    let balance_system: Vec<String> = system_position
+        .balance
+        .outcomes
+        .iter()
+        .map(|oc| oc.to_string())
+        .collect();
 
     html! {
         (view_html_head("Predict-o-matic"))
@@ -376,6 +403,8 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                 }
             }
             script {
+                "const systemBalance = [" @for b in balance_system { (b) ", " } "];\n"
+                "const userBalance = [" @for b in balance_user { (b) ", " } "];\n"
                 (get_trade_script())
             }
         }
