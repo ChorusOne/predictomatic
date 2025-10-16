@@ -13,7 +13,7 @@ use tiny_http::Header;
 
 use crate::config::Config;
 use crate::database as db;
-use crate::model::{self, Amount, AssetId, Market};
+use crate::model::{self, Amount, AssetId, Balance, Distribution, Market};
 use crate::{Response, User};
 
 fn respond_html(markup: Markup) -> Response {
@@ -26,7 +26,7 @@ fn respond_error<R: Into<String>>(reason: R) -> Response {
     let page = html! {
         (view_html_head("Predict-o-matic Error"))
         body {
-            div class="main-error" {
+            div .main-error {
                 h1 { "D’oh!" }
                 p { (reason.into()) }
             }
@@ -154,11 +154,11 @@ fn view_header(ctx: &Context) -> Markup {
                 a href=(ctx.config.server.prefix) { "Predict-o-matic" }
             }
             " "
-            span class="balance" {
+            span .balance {
                 (format!("$\u{200a}{:.2}", ctx.user_points))
             }
             " "
-            span class="user" {
+            span .user {
                 (ctx.user.email)
             }
         }
@@ -170,11 +170,11 @@ fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
         (view_html_head("Predict-o-matic"))
         body {
             (view_header(ctx))
-            div class="main" {
+            div .main {
                 section {
                     h1 { "Markets" }
                     @for market in markets {
-                        div class="market" {
+                        div .market {
                             h2 {
                                 a href=(ctx.market_url(market, "")) {
                                     (market.title)
@@ -212,67 +212,133 @@ pub fn handle_index(
     Ok(respond_html(body))
 }
 
+fn view_market_stats(market: &Market, implied_probabilities: &[f64]) -> Markup {
+    let liquidity = market.total_deposited();
+    html! {
+        table {
+            tr {
+                td { "Liquidity" }
+                td .num { (format!("$\u{200a}{liquidity:.2}")) }
+            }
+            @for (oc, p) in market.outcomes.iter().zip(implied_probabilities) {
+                tr {
+                    td { (oc.value) }
+                    td .num { (format!("$\u{200a}{p:.2}")) }
+                }
+            }
+        }
+    }
+}
+
+/// A user's position in a given market.
+struct MarketPosition<'a> {
+    owner: &'a str,
+    balance: &'a Balance,
+
+    /// Current market value of the outcome shares held, in points.
+    market_value: Amount,
+
+    /// Market value minus amount deposited, in points.
+    unrealized_pnl: Amount,
+}
+
+fn view_market_position_aside(market: &Market, position: &MarketPosition) -> Markup {
+    html! {
+        table {
+            @for (oc, pos) in market.outcomes.iter().zip(&position.balance.outcomes) {
+                tr {
+                    td { (oc.value) }
+                    td .num { (format!("${pos:.2}")) }
+                }
+            }
+            tr {
+                td { "Market value"}
+                td .num { (format!("$\u{200a}{:.2}", position.market_value))}
+            }
+            tr {
+                td { "Deposited"}
+                td .num { (format!("$\u{200a}{:.2}", position.balance.points))}
+            }
+            tr {
+                td { "Unrealized PnL"}
+                td .num { (format!("$\u{200a}{:.2}", position.unrealized_pnl))}
+            }
+        }
+    }
+}
+
+fn view_market_participants(positions: &[MarketPosition]) -> Markup {
+    html! {
+        table .wide {
+            tr {
+                th { "Participant" }
+                th .num { "Deposit" }
+                th .num { "Value" }
+                th .num { "UPnL" }
+            }
+            @for position in positions {
+                tr {
+                    td { (position.owner) }
+                    td .num { (format!("$\u{200a}{:.2}", position.balance.points)) }
+                    td .num { (format!("$\u{200a}{:.2}", position.market_value)) }
+                    td .num { (format!("$\u{200a}{:.2}", position.unrealized_pnl)) }
+                }
+            }
+        }
+    }
+}
+
 fn view_market(ctx: &Context, market: &Market) -> Markup {
     let default_deposit = AssetId::POINTS.micros(10_000_000).min(ctx.user_points);
-    let total_deposited = market.total_deposited();
-    let ps = market.implied_distribution().ps();
-    let p_yes = ps[0];
-    let p_no = ps[1];
+    let dist = market.implied_distribution();
+    let ps = dist.ps();
+
+    // Compute the position of everybody who is participating in this market.
+    let mut positions = Vec::new();
+    for (owner, balance) in market.balances.iter() {
+        let mut market_value = AssetId::POINTS.zero();
+        for (oc, p) in balance.outcomes.iter().zip(&ps) {
+            market_value = market_value + oc.value_at(*p);
+        }
+        let unrealized_pnl = market_value - balance.points;
+        let pos = MarketPosition {
+            owner,
+            balance,
+            market_value,
+            unrealized_pnl,
+        };
+        positions.push(pos);
+    }
+
+    // Sort by descending profit, break ties by sorting by portfolio value.
+    positions.sort_by_key(|pos| std::cmp::Reverse((pos.unrealized_pnl, pos.market_value)));
+
+    let our_position = positions.iter().find(|pos| pos.owner == ctx.user.email);
 
     html! {
         (view_html_head("Predict-o-matic"))
         body {
             (view_header(ctx))
-            div class="main" {
+            div .main {
                 section {
                     h1 { (market.title) }
                     p { "I need to summarize the prediction here." }
                     h2 { "Resolution criteria" }
                     p { (market.description) }
                     h2 { "Participants" }
-                    p { "I could show a table here of participants, ranked by volume and PnL." }
+                    (view_market_participants(&positions))
                     h2 { "Activity" }
                     p { "I could show a log of trades and comments here." }
                 }
                 aside {
-                    table {
-                        tr {
-                            td { "Liquidity" }
-                            td class="num" { (format!("$\u{200a}{total_deposited:.2}")) }
-                        }
-                        tr {
-                            td { "Yes" }
-                            td class="num" { (format!("$\u{200a}{p_yes:.2}")) }
-                        }
-                        tr {
-                            td { "No" }
-                            td class="num" { (format!("$\u{200a}{p_no:.2}")) }
-                        }
-                    }
+                    (view_market_stats(market, &ps))
 
                     h3 { "Your balance" }
-                    table {
-                        tr {
-                            td { "Yes" }
-                            td class="num" { "0.00" }
-                        }
-                        tr {
-                            td { "No" }
-                            td class="num" { "0.00" }
-                        }
-                        tr {
-                            td { "Market value" }
-                            td class="num" { "$\u{200a}0.00" }
-                        }
-                        tr {
-                            td { "Deposited" }
-                            td class="num" { "$\u{200a}0.00" }
-                        }
-                        tr {
-                            td { "Unrealized PnL" }
-                            td class="num" { "$\u{200a}0.00" }
-                        }
+                    @match our_position {
+                        None => { "You are not participating." }
+                        Some(pos) => (view_market_position_aside(market, pos)),
                     }
+
                     h3 { "Deposit" }
                     form method="post" action=(ctx.market_url(market, "/deposit")) {
                         label {

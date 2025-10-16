@@ -184,7 +184,8 @@ insert into
 -- Return the possible outcomes of a given market.
 -- @query get_outcomes(market_id: i64) ->* Outcome
 select id /* :i64 */, value /* :str */ from outcomes
-  where market_id = :market_id;
+  where market_id = :market_id
+  order by id asc;
 
 -- Insert an outcome, return its id.
 -- @query create_outcome(market_id: i64, value: str) ->1 i64

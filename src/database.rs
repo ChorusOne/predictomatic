@@ -537,7 +537,8 @@ pub fn get_outcomes<'i, 't, 'a>(
 ) -> Result<Iter<'i, 'a, Outcome>> {
     let sql = r#"
         select id, value from outcomes
-          where market_id = :market_id;
+          where market_id = :market_id
+          order by id asc;
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),

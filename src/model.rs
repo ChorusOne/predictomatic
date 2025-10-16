@@ -106,6 +106,11 @@ impl Amount {
     pub fn cast(&self, new_asset: AssetId) -> Amount {
         Amount(self.0, new_asset)
     }
+
+    /// For an outcome asset, and an asset price (at points per share), return the value in points.
+    pub fn value_at(self, price: f64) -> Amount {
+        Amount((self.0 as f64 * price) as i64, AssetId::POINTS)
+    }
 }
 
 impl std::ops::Add for Amount {
@@ -114,6 +119,18 @@ impl std::ops::Add for Amount {
         assert_eq!(self.1, rhs.1, "Can only add amounts for the same asset.");
         // Always check for overflow, not just in debug mode.
         Amount(self.0.checked_add(rhs.0).unwrap(), self.1)
+    }
+}
+
+impl std::ops::Sub for Amount {
+    type Output = Amount;
+    fn sub(self, rhs: Amount) -> Amount {
+        assert_eq!(
+            self.1, rhs.1,
+            "Can only subtract amounts for the same asset."
+        );
+        // Always check for overflow, not just in debug mode.
+        Amount(self.0.checked_sub(rhs.0).unwrap(), self.1)
     }
 }
 
@@ -271,10 +288,10 @@ pub struct Outcome {
 #[derive(Clone, Debug)]
 pub struct Balance {
     /// For every outcome in the market, in the same order, the balance.
-    outcomes: Vec<Amount>,
+    pub outcomes: Vec<Amount>,
 
     /// Balance of the points account.
-    points: Amount,
+    pub points: Amount,
 }
 
 /// A probability distribution for the outcomes of a given market.

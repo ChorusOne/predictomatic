@@ -105,11 +105,20 @@ h3 {
     margin-top: 1.6rem;
 }
 
-table {
+/* TODO: Make even the table in the content area 100% width? It looks better ... */
+aside table {
     width: 100%;
 }
 
-table td.num {
+table.wide td + td, table.wide th + th{
+    padding-left: 2rem;
+}
+
+table th {
+    text-align: left;
+}
+
+table .num {
     font-variant-numeric: lining-nums;
     text-align: right;
 }
