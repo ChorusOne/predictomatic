@@ -100,6 +100,13 @@ impl AccountId {
 #[derive(Copy, Clone, Debug)]
 pub struct Amount(i64, AssetId);
 
+impl Amount {
+    /// Cast the amount to a different asset type.
+    pub fn cast(&self, new_asset: AssetId) -> Amount {
+        Amount(self.0, new_asset)
+    }
+}
+
 impl std::cmp::PartialOrd for Amount {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         // Technically with *partial* cmp we should return `None`, but even
@@ -116,7 +123,7 @@ impl std::cmp::PartialEq for Amount {
     }
 }
 
-impl std::cmp::Eq for Amount { }
+impl std::cmp::Eq for Amount {}
 
 impl std::cmp::Ord for Amount {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
@@ -174,6 +181,8 @@ pub fn create_transfer(
 }
 
 /// Constraints on account balance.
+/// TODO: I don't actually use accounts that can have both,
+/// I could simplify to credit/debit account and single column in db.
 #[derive(Copy, Clone)]
 enum AccountConstraint {
     /// Zero or positive.
@@ -318,11 +327,18 @@ pub fn market_deposit(
     // Move the points from the user's global account, into the user's point
     // account for this market.
     let pos = AccountConstraint::Positive;
+    let neg = AccountConstraint::Negative;
     let acc_global_points = ensure_account(tx, MarketId::NONE, AssetId::POINTS, owner, pos)?;
     let acc_market_points = ensure_account(tx, market.id, AssetId::POINTS, owner, pos)?;
     create_transfer(tx, event, acc_global_points, acc_market_points, amount)?;
 
-    // TODO: Mint the outcome shares.
+    // Mint the outcome shares equal to the deposited amount for every outcome.
+    for outcome in &market.outcomes {
+        let asset = outcome.id.into();
+        let acc_mint = ensure_account(tx, MarketId::NONE, asset, "SYSTEM", neg)?;
+        let acc_owner = ensure_account(tx, market.id, asset, owner, pos)?;
+        create_transfer(tx, event, acc_mint, acc_owner, amount.cast(asset))?;
+    }
 
     Ok(())
 }
