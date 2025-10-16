@@ -172,13 +172,14 @@ impl fmt::Display for Amount {
             "Amounts have at most 6 decimal digits of precision."
         );
 
-        // Amounts are in micros, so we have 6 decimals by default.
-        let integral = self.0 / 1_000_000;
-        let fractional = (self.0 % 1_000_000).abs();
-
         // Round to the requested number of decimal places.
         let pow10_trunc = 10_i64.pow(6 - precision as u32);
-        let fractional_trunc = (fractional + pow10_trunc / 2) / pow10_trunc;
+
+        // Amounts are in micros, so we have 6 decimals by default.
+        let amount = self.0 + (pow10_trunc / 2) * self.0.signum();
+        let integral = amount / 1_000_000;
+        let fractional = (amount % 1_000_000).abs();
+        let fractional_trunc = fractional / pow10_trunc;
 
         write!(f, "{integral}.{fractional_trunc:>0p$}", p = precision)
     }
@@ -503,6 +504,10 @@ mod test {
         assert_eq!(format!("{x}"), "-123.000789");
         assert_eq!(format!("{x:.3}"), "-123.001");
         assert_eq!(format!("{x:.1}"), "-123.0");
+
+        let x = Amount(1_999_999, AssetId::POINTS);
+        assert_eq!(format!("{x}"), "1.999999");
+        assert_eq!(format!("{x:.2}"), "2.00");
     }
 
     #[test]
