@@ -142,6 +142,9 @@ fn handle_request(
                 ["market", market_slug, "deposit"] => {
                     endpoints::handle_deposit(config, tx, &user, market_slug, &body)
                 }
+                ["market", market_slug, "trade"] => {
+                    endpoints::handle_trade(config, tx, &user, market_slug, &body)
+                }
                 _ => Ok(not_found("Not found.")),
             }
         } else {

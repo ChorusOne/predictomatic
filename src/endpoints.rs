@@ -470,6 +470,70 @@ pub fn handle_deposit(
     Ok(redirect_see_other(ctx.market_url(&market, "")))
 }
 
+pub fn handle_trade(
+    config: &Config,
+    tx: &mut db::Transaction,
+    user: &User,
+    market_slug: &str,
+    body: &str,
+) -> db::Result<Response> {
+    use std::str::FromStr;
+    let ctx = Context::new(config, user, tx)?;
+    let market = match model::get_market_by_slug(tx, market_slug)? {
+        None => return Ok(not_found("No such market exists.")),
+        Some(market) => market,
+    };
+
+    let mut max_in_str = None;
+    let mut min_out_str = None;
+    let mut asset_in = AssetId::POINTS;
+    let mut asset_out = AssetId::POINTS;
+
+    for (key, value) in form_urlencoded::parse(body.as_bytes()) {
+        match key.as_ref() {
+            // TODO: We can avoid the to_string, but this code is ugly enough as it is.
+            "max_in" => max_in_str = Some(value.to_string()),
+            "min_out" => min_out_str = Some(value.to_string()),
+            "asset_in" => match i64::from_str(value.as_ref()) {
+                Ok(n) => asset_in = AssetId(n),
+                Err(..) => return Ok(bad_request("Invalid asset id for asset_in.")),
+            }
+            "asset_out" => match i64::from_str(value.as_ref()) {
+                Ok(n) => asset_out = AssetId(n),
+                Err(..) => return Ok(bad_request("Invalid asset id for asset_out.")),
+            }
+            _ => return Ok(bad_request("Unexpected form data.")),
+        }
+    }
+
+    let max_in = match max_in_str {
+        Some(v) if asset_in != AssetId::POINTS => {
+            match asset_in.parse_amount(&v) {
+                Some(n) => n,
+                None => return Ok(bad_request("Invalid max_in amount or in asset id absent.")),
+            }
+        }
+        _ => return Ok(bad_request("Missing max_in amount or asset id.")),
+    };
+    let min_out = match min_out_str {
+        Some(v) if asset_out != AssetId::POINTS => {
+            match asset_out.parse_amount(&v) {
+                Some(n) => n,
+                None => return Ok(bad_request("Invalid min_out amount or in asset id absent.")),
+            }
+        }
+        _ => return Ok(bad_request("Missing min_out amount or asset id.")),
+    };
+
+    if max_in <= AssetId::POINTS.zero() || min_out <= AssetId::POINTS.zero() {
+        return Ok(bad_request("Amount max_in and min_out must be greater than zero."));
+    }
+
+    unimplemented!("TODO: Handle trade.");
+
+    Ok(redirect_see_other(ctx.market_url(&market, "")))
+}
+
 /// Validate user inputs against length limits and Unicode subset.
 ///
 /// Users should be able to input text, but allowing any Unicode code point

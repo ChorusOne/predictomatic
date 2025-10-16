@@ -31,7 +31,7 @@ impl MarketId {
 pub struct OutcomeId(i64, MarketId);
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct AssetId(i64);
+pub struct AssetId(pub i64);
 
 impl AssetId {
     /// The asset id for the native asset ("points").
