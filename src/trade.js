@@ -26,6 +26,23 @@ function getProbability(balance) {
 function getTrade(p) {
     const newYes = -Math.log(invariant * p) * marketB;
     const newNo = -Math.log(invariant * (1.0 - p)) * marketB;
+    const dYes = newYes - systemBalance[0];
+    const dNo = newNo - systemBalance[0];
+    const offerElem = document.getElementById("trade-offer");
+
+    // TODO: Don't hard-code the names here.
+    if (dYes > 0.005) {
+        const buyNo = (-dNo).toFixed(2);
+        const sellYes = dYes.toFixed(2);
+        offerElem.innerText = `Trade offer: ${buyNo} No for ${sellYes} Yes.`;
+    } else if (dNo > 0.005) {
+        const buyYes = (-dYes).toFixed(2);
+        const sellNo = dNo.toFixed(2);
+        offerElem.innerText = `Trade offer: ${buyYes} Yes for ${sellNo} No.`;
+    } else {
+        offerElem.innerText = "Move the slider to receive a trade offer.";
+    }
+
     console.log(p, newYes, newNo, getProbability([newYes, newNo]));
 }
 
@@ -55,7 +72,6 @@ function initializeSlider() {
         setPos(pElem, p);
         pElem.innerText = `${(p * 100.0).toFixed(1)}%`;
     };
-
     const positionSlider = (p) => {
         setPos(knob, p);
         setPercentage(tUser, pUser, p);
@@ -68,8 +84,8 @@ function initializeSlider() {
         // narrower.
         const min = Math.max(pMin, 0.001);
         const max = Math.min(pMax, 0.999);
-        const rxClamp = Math.max(min, Math.min(max, rx));
-        positionSlider(rxClamp);
+        const p = Math.max(min, Math.min(max, rx));
+        positionSlider(p);
     };
     const onDragEnd = (event) => {
         document.removeEventListener("mouseup", onDragEnd);

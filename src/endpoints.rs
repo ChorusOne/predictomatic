@@ -302,6 +302,9 @@ fn view_prediction_binary(market: &Market, ps: &[f64]) -> Markup {
             span .percentage .puser { (percentage) }
             span .knob {}
         }
+        p #trade-offer {
+            "Move the slider to receive a trade offer."
+        }
         noscript {
             "You need to enable Javascript to trade."
         }
