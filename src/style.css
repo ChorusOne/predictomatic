@@ -213,8 +213,8 @@ form label input {
     font-style: italic;
 }
 
-.slider .pmarket { top: 0; }
-.slider .puser { bottom: 0; }
+.slider .pmarket { top: 0.5rem; }
+.slider .puser { bottom: 0.5rem; }
 
 .slider .tmarket, .slider .tuser {
     width: 0;

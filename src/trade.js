@@ -3,7 +3,9 @@ function initializeSlider() {
     const knob = widget.getElementsByClassName("knob")[0];
     const hr = widget.getElementsByTagName("hr")[0];
     const tMarket = widget.getElementsByClassName("tmarket")[0];
+    const pMarket = widget.getElementsByClassName("pmarket")[0];
     const tUser = widget.getElementsByClassName("tuser")[0];
+    const pUser = widget.getElementsByClassName("puser")[0];
 
     var startX = 0.0;
     var startY = 0.0;
@@ -17,10 +19,15 @@ function initializeSlider() {
         const xAbs = hrRect.left - widgetRect.left + xRel;
         elem.style.left = `${xAbs}px`;
     };
+    const setPercentage = (tElem, pElem, p) => {
+        setPos(tElem, p);
+        setPos(pElem, p);
+        pElem.innerText = `${(p * 100.0).toFixed(1)}%`;
+    };
 
     const positionSlider = (p) => {
         setPos(knob, p);
-        setPos(tUser, p);
+        setPercentage(tUser, pUser, p);
     };
     const onDragMove = (event) => {
         const dx = event.clientX - startX;
@@ -50,7 +57,7 @@ function initializeSlider() {
     knob.addEventListener("touchstart", onDragStart);
 
     positionSlider(0.8);
-    setPos(tMarket, 0.8);
+    setPercentage(tMarket, pMarket, 0.8);
 }
 
 function initialize() {
