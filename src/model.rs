@@ -277,6 +277,49 @@ pub struct Balance {
     points: Amount,
 }
 
+/// A probability distribution for the outcomes of a given market.
+pub struct Distribution {
+    /// For every outcome, its log-probability.
+    ///
+    /// Invariant: the logits are normalized such that their exps sum to 1.
+    logits: Vec<f64>,
+}
+
+impl Distribution {
+    /// Turn AMM pool balances into a probability distribution.
+    pub fn from_pool(balance: &Balance) -> Distribution {
+        // TODO: What about the proportionality constant?
+        let mut logits: Vec<f64> = balance
+            .outcomes
+            .iter()
+            // The points are stored as micros, correct for that to not blow up
+            // the exps below.
+            .map(|oc| -(oc.0 as f64) * 1e-6)
+            .collect();
+
+        // In principle this is it, but when we convert to probability, we take
+        // the exp of the logits and divide by their sum to normalize the
+        // distribution. But dividing a log by a constant is just subtracting
+        // a constant from the logit, so we can do that here already.
+        let mut exps: Vec<_> = logits.iter().map(|lk| lk.exp()).collect();
+        exps.sort_by(|x, y| x.partial_cmp(y).expect("Pool balances must not go to 0."));
+        let ln_total = exps.iter().sum::<f64>().ln();
+        debug_assert!(ln_total.is_finite());
+
+        for lk in logits.iter_mut() {
+            debug_assert!(lk.is_finite());
+            *lk -= ln_total;
+        }
+
+        Distribution { logits }
+    }
+
+    /// Return the probability for every outcome.
+    pub fn ps(&self) -> Vec<f64> {
+        self.logits.iter().map(|k| k.exp()).collect()
+    }
+}
+
 pub struct Market {
     pub id: MarketId,
     pub slug: String,
@@ -297,6 +340,11 @@ impl Market {
             sum = sum + b.points;
         }
         sum
+    }
+
+    /// Return the probability distribution over outcomes implied by the AMM pool balances.
+    pub fn implied_distribution(&self) -> Distribution {
+        Distribution::from_pool(&self.balances["SYSTEM"])
     }
 }
 

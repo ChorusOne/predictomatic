@@ -215,6 +215,9 @@ pub fn handle_index(
 fn view_market(ctx: &Context, market: &Market) -> Markup {
     let default_deposit = AssetId::POINTS.micros(10_000_000).min(ctx.user_points);
     let total_deposited = market.total_deposited();
+    let ps = market.implied_distribution().ps();
+    let p_yes = ps[0];
+    let p_no = ps[1];
 
     html! {
         (view_html_head("Predict-o-matic"))
@@ -239,11 +242,11 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                         }
                         tr {
                             td { "Yes" }
-                            td class="num" { "$\u{200a}0.00" }
+                            td class="num" { (format!("$\u{200a}{p_yes:.2}")) }
                         }
                         tr {
                             td { "No" }
-                            td class="num" { "$\u{200a}0.00" }
+                            td class="num" { (format!("$\u{200a}{p_no:.2}")) }
                         }
                     }
 
