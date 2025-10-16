@@ -33,6 +33,8 @@ function getTrade(p) {
     const dYes = newYes - systemBalance[0];
     const dNo = newNo - systemBalance[0];
     const offerElem = document.getElementById("trade-offer");
+    const labelYes = assetLabels[0];
+    const labelNo = assetLabels[1];
 
     // TODO: Don't hard-code the names here.
     if (dYes > 0.005) {
@@ -41,16 +43,16 @@ function getTrade(p) {
         const ratio = -dNo / dYes;
         const costPoints = (1.0 / (ratio + 1.0)).toFixed(2);
         offerElem.innerText =
-          `Trade offer: ${buyNo} No for ${sellYes} Yes. ` +
-          `(Average price: 1 No = $\u{200a}${costPoints}.)`;
+          `Trade offer: ${buyNo} ${labelNo} for ${sellYes} ${labelYes}. ` +
+          `(Average price: 1 ${labelNo} = $\u{200a}${costPoints}.)`;
     } else if (dNo > 0.005) {
         const buyYes = (-dYes).toFixed(2);
         const sellNo = dNo.toFixed(2);
         const ratio = -dYes / dNo;
         const costPoints = (1.0 / (ratio + 1.0)).toFixed(2);
         offerElem.innerText =
-          `Trade offer: ${buyYes} Yes for ${sellNo} No. ` +
-          `(Average price: 1 Yes = $\u{200a}${costPoints}.)`;
+          `Trade offer: ${buyYes} ${labelYes} for ${sellNo} ${labelNo}. ` +
+          `(Average price: 1 ${labelYes} = $\u{200a}${costPoints}.)`;
     } else if (canTrade) {
         offerElem.innerText = "Move the slider to receive a trade offer.";
     } else {

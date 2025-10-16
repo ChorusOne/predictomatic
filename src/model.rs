@@ -28,7 +28,7 @@ impl MarketId {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct OutcomeId(i64, MarketId);
+pub struct OutcomeId(pub i64, MarketId);
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AssetId(pub i64);

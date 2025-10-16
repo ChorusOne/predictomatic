@@ -408,6 +408,10 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
             script {
                 "const systemBalance = [" @for b in balance_system { (b) ", " } "];\n"
                 "const userBalance = [" @for b in balance_user { (b) ", " } "];\n"
+                "const assetIds = [" @for oc in &market.outcomes { (oc.id.0) ", " } "];\n"
+                // TODO: Properly serialize the strings as json, Rust's Debug is nto the same!
+                // Also it now contains a glaring injection vulnerability.
+                "const assetLabels = [" @for oc in &market.outcomes { (maud::PreEscaped(format!("{:?}", oc.value))) ", " } "];\n"
                 (get_trade_script())
             }
         }
@@ -528,6 +532,8 @@ pub fn handle_trade(
     if max_in <= AssetId::POINTS.zero() || min_out <= AssetId::POINTS.zero() {
         return Ok(bad_request("Amount max_in and min_out must be greater than zero."));
     }
+
+    // TODO: Verify that the asset ids belong to the market.
 
     unimplemented!("TODO: Handle trade.");
 
