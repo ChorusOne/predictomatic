@@ -405,7 +405,9 @@ pub fn handle_deposit(
     }
 
     if amount <= AssetId::POINTS.zero() {
-        return Ok(bad_request("Amount must be greater than 0."));
+        return Ok(bad_request(format!(
+            "Amount must be greater than 0, but got {amount}."
+        )));
     }
 
     model::create_deposit(tx, &market, amount, &user.email)?;
