@@ -191,6 +191,7 @@ form label input {
     padding-left: 1rem;
     padding-right: 1rem;
     position: relative;
+    user-select: none;
 }
 
 .slider hr {

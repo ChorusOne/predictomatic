@@ -99,15 +99,15 @@ fn get_stylesheet() -> Markup {
 
 // Same for the script.
 #[cfg(debug_assertions)]
-fn get_predict_script() -> Markup {
-    let data = std::fs::read_to_string("src/predict.js")
-        .expect("Need to run from repo root in debug mode.");
+fn get_trade_script() -> Markup {
+    let data =
+        std::fs::read_to_string("src/trade.js").expect("Need to run from repo root in debug mode.");
     maud::PreEscaped(data)
 }
 
 #[cfg(not(debug_assertions))]
-fn get_predict_script() -> Markup {
-    maud::PreEscaped(include_str!("predict.js").to_string())
+fn get_trade_script() -> Markup {
+    maud::PreEscaped(include_str!("trade.js").to_string())
 }
 
 fn view_email<'a>(config: &Config, email: &'a str) -> &'a str {
@@ -294,11 +294,14 @@ fn view_prediction_binary(market: &Market, ps: &[f64]) -> Markup {
     let percentage = format!("{:.1}%", p * 100.0);
 
     html! {
-        div .slider {
+        div #trade-widget .slider {
             hr;
             span .percentage .pmarket { (percentage) }
             span .percentage .puser { (percentage) }
             span .knob {}
+        }
+        noscript {
+            "You need to enable Javascript to trade."
         }
     }
 }
@@ -369,6 +372,9 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                         button type="submit" { "Deposit" }
                     }
                 }
+            }
+            script {
+                (get_trade_script())
             }
         }
     }
