@@ -238,7 +238,7 @@ pub fn ensure_points_account(
             );
             let from_account = AccountId::SYSTEM_POINTS;
             let event = EventId(db::create_event(tx, "SYSTEM", "Sign-on bonus")?);
-            let amount = Amount(config.opening_balance_micropoints, asset_id);
+            let amount = Amount(config.opening_balance_micros, asset_id);
             create_transfer(tx, event, from_account, to_account, amount)?;
             to_account.0
         }
@@ -347,6 +347,10 @@ pub fn create_market(tx: &mut Transaction, market: &MarketConfig) -> Result<Mark
         db::create_outcome(tx, market_id, outcome)?;
     }
 
+    let fund_amount = AssetId::POINTS.micros(market.fund_micros);
+    let market = get_market_by_slug(tx, &market.slug)?.expect("We created it, it exists.");
+    create_deposit(tx, &market, fund_amount, "SYSTEM")?;
+
     Ok(MarketId(market_id))
 }
 
@@ -362,7 +366,7 @@ pub fn ensure_markets(tx: &mut Transaction, markets: &[MarketConfig]) -> Result<
     Ok(())
 }
 
-pub fn market_deposit(
+pub fn create_deposit(
     tx: &mut Transaction,
     market: &Market,
     amount: Amount,

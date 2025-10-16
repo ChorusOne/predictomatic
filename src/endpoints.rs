@@ -338,7 +338,7 @@ pub fn handle_deposit(
         return Ok(bad_request("Amount must be greater than 0."));
     }
 
-    model::market_deposit(tx, &market, amount, &user.email)?;
+    model::create_deposit(tx, &market, amount, &user.email)?;
 
     Ok(redirect_see_other(ctx.market_url(&market, "")))
 }

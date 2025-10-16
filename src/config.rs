@@ -36,7 +36,7 @@ pub struct AppConfig {
     pub email_suffix: String,
 
     /// The opening balance of new users, in 10^-6 points.
-    pub opening_balance_micropoints: i64,
+    pub opening_balance_micros: i64,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -87,4 +87,9 @@ pub struct MarketConfig {
     pub description: String,
     pub kind: MarketKind,
     pub outcomes: Vec<String>,
+
+    /// The amount to bootstrap the AMM with, in 10^-6 points.
+    ///
+    /// This is paid for by minting new points from the system account.
+    pub fund_micros: i64,
 }

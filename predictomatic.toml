@@ -8,7 +8,7 @@ path = "predictomatic.sqlite3"
 [app]
 admin_email = "admin@example.com"
 email_suffix = "@example.com"
-opening_balance_micropoints = 100_000_000
+opening_balance_micros = 100_000_000
 
 [debug]
 unsafe_default_email = "admin@example.com"
@@ -26,3 +26,4 @@ is in a state where:
 """
 kind = "binary"
 outcomes = ["Yes", "No"]
+fund_micros = 10_000_000
