@@ -38,11 +38,19 @@ function getTrade(p) {
     if (dYes > 0.005) {
         const buyNo = (-dNo).toFixed(2);
         const sellYes = dYes.toFixed(2);
-        offerElem.innerText = `Trade offer: ${buyNo} No for ${sellYes} Yes.`;
+        const ratio = -dNo / dYes;
+        const costPoints = (1.0 / (ratio + 1.0)).toFixed(2);
+        offerElem.innerText =
+          `Trade offer: ${buyNo} No for ${sellYes} Yes. ` +
+          `(Average price: 1 No = $\u{200a}${costPoints}.)`;
     } else if (dNo > 0.005) {
         const buyYes = (-dYes).toFixed(2);
         const sellNo = dNo.toFixed(2);
-        offerElem.innerText = `Trade offer: ${buyYes} Yes for ${sellNo} No.`;
+        const ratio = -dYes / dNo;
+        const costPoints = (1.0 / (ratio + 1.0)).toFixed(2);
+        offerElem.innerText =
+          `Trade offer: ${buyYes} Yes for ${sellNo} No. ` +
+          `(Average price: 1 Yes = $\u{200a}${costPoints}.)`;
     } else if (canTrade) {
         offerElem.innerText = "Move the slider to receive a trade offer.";
     } else {
