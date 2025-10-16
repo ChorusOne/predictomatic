@@ -27,7 +27,7 @@ body {
     color: var(--fg);
 }
 
-h1, h2, h3 {
+h1, h2, h3, .percentage {
     font-family: 'Work Sans', 'Atkinson Hyperlegible', sans-serif;
 }
 
@@ -110,7 +110,7 @@ aside table {
     width: 100%;
 }
 
-table.wide td + td, table.wide th + th{
+table.wide td + td, table.wide th + th {
     padding-left: 2rem;
 }
 
@@ -183,6 +183,52 @@ form label input {
     font-size: 0.9rem;
     line-height: 1rem;
     text-align: right;
+}
+
+.slider {
+    width: calc(100% - 2rem);
+    height: 10rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    position: relative;
+}
+
+.slider hr {
+    border: none;
+    border-bottom: 2pt solid var(--fg);
+    height: calc(50% - 1pt);
+}
+
+.slider .percentage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 0;
+    position: absolute;
+    left: 50%;
+    line-height: 3rem;
+    font-size: 2.4rem;
+    font-weight: 900;
+    font-style: italic;
+}
+
+.slider .pmarket {
+    top: 0;
+}
+
+.slider .puser {
+    bottom: 0;
+}
+
+.slider .knob {
+    display: block;
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 2rem;
+    background: var(--dp);
+    border: 2pt solid var(--fg);
+    position: absolute;
+    top: calc(50% - 0.6rem - 2pt);
 }
 
 .market + .market, p + .market {

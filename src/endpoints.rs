@@ -248,7 +248,7 @@ fn view_market_position_aside(market: &Market, position: &MarketPosition) -> Mar
             @for (oc, pos) in market.outcomes.iter().zip(&position.balance.outcomes) {
                 tr {
                     td { (oc.value) }
-                    td .num { (format!("${pos:.2}")) }
+                    td .num { (format!("{pos:.2}")) }
                 }
             }
             tr {
@@ -288,6 +288,21 @@ fn view_market_participants(positions: &[MarketPosition]) -> Markup {
     }
 }
 
+fn view_prediction_binary(market: &Market, ps: &[f64]) -> Markup {
+    // The convention is that the first outcome is the positive one.
+    let p = ps[0];
+    let percentage = format!("{:.1}%", p * 100.0);
+
+    html! {
+        div .slider {
+            hr;
+            span .percentage .pmarket { (percentage) }
+            span .percentage .puser { (percentage) }
+            span .knob {}
+        }
+    }
+}
+
 fn view_market(ctx: &Context, market: &Market) -> Markup {
     let default_deposit = AssetId::POINTS.micros(10_000_000).min(ctx.user_points);
     let dist = market.implied_distribution();
@@ -322,7 +337,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
             div .main {
                 section {
                     h1 { (market.title) }
-                    p { "I need to summarize the prediction here." }
+                    (view_prediction_binary(market, &ps))
                     h2 { "Resolution criteria" }
                     p { (market.description) }
                     h2 { "Participants" }
