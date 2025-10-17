@@ -195,6 +195,7 @@ fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
 }
 
 fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
+    let url = |suffix| format!("{}{}", ctx.config.server.prefix, suffix);
     html! {
         (view_html_head("Predict-o-matic"))
         body {
@@ -207,6 +208,26 @@ fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
                     }
                     @for market in markets {
                         (view_market_summary(ctx, market))
+                    }
+                }
+                aside {
+                    h3 { "Account" }
+                    p {
+                        a href=(url("/assets")) { "Assets" } br;
+                        a href=(url("/trades")) { "Trade history" } br;
+                        a href=(url("/ranking")) { "Ranking" }
+                    }
+                    h3 { "Help" }
+                    p {
+                        a href=(url("/help")) { "User guide" } br;
+                        a href="https://github.com/ChorusOne/predictomatic" { "Source code" }
+                    }
+                    @if ctx.user.is_admin {
+                        h3 { "Administration" }
+                        p {
+                            a href=(url("/create")) { "Create market" } br;
+                            a href=(url("/bonus")) { "Distribute bonus" } br;
+                        }
                     }
                 }
             }
