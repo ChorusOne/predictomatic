@@ -401,7 +401,10 @@ impl Market {
 
         // Get the current pool balances. Asset i is the one we sell to the pool,
         // asset j the one we get out.
-        let q_i = pool_balance.outcomes.iter().find(|oc| oc.1 == amount_in.1)?;
+        let q_i = pool_balance
+            .outcomes
+            .iter()
+            .find(|oc| oc.1 == amount_in.1)?;
         let q_j = pool_balance.outcomes.iter().find(|oc| oc.1 == min_out.1)?;
 
         let q_i_prime = *q_i + amount_in;
@@ -622,14 +625,7 @@ pub fn create_resolution(tx: &mut Transaction, market: &Market, outcome: Outcome
             // Also record the realized profits to make it easier to show the
             // status of a resolved market.
             let amount_in = balance.points;
-            db::create_realized_profit(
-                tx,
-                market.id.0,
-                event.0,
-                owner,
-                amount_in.0,
-                amount_out.0,
-            )?;
+            db::create_realized_profit(tx, market.id.0, event.0, owner, amount_in.0, amount_out.0)?;
         }
     }
 

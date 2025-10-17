@@ -14,14 +14,14 @@ use std::time::Instant;
 
 use tiny_http::{HeaderField, Method, Request, Server};
 
-use config::Config;
-use database as db;
-use endpoints::{internal_error, not_found, service_unavailable};
+use crate::config::Config;
+use crate::database as db;
+use crate::routes::{internal_error, not_found, service_unavailable};
 
 mod config;
 mod database;
-mod endpoints;
 mod model;
+mod routes;
 
 type Response = tiny_http::Response<Cursor<Vec<u8>>>;
 
@@ -140,21 +140,23 @@ fn handle_request(
         if request.method() == &Method::Post {
             match &path_segments[..] {
                 ["market", market_slug, "deposit"] => {
-                    endpoints::handle_deposit(config, tx, &user, market_slug, &body)
+                    crate::routes::market::handle_deposit(config, tx, &user, market_slug, &body)
                 }
                 ["market", market_slug, "trade"] => {
-                    endpoints::handle_trade(config, tx, &user, market_slug, &body)
+                    crate::routes::market::handle_trade(config, tx, &user, market_slug, &body)
                 }
                 ["market", market_slug, "resolve", outcome] => {
-                    endpoints::handle_resolve(config, tx, &user, market_slug, outcome)
+                    crate::routes::market::handle_resolve(config, tx, &user, market_slug, outcome)
                 }
                 _ => Ok(not_found("Not found.")),
             }
         } else {
             // Assume everything else is a GET request.
             match &path_segments[..] {
-                [] | [""] => endpoints::handle_index(config, tx, &user),
-                ["market", market_slug] => endpoints::handle_market(config, tx, &user, market_slug),
+                [] | [""] => crate::routes::index::handle_index(config, tx, &user),
+                ["market", market_slug] => {
+                    crate::routes::market::handle_market(config, tx, &user, market_slug)
+                }
                 _ => Ok(not_found("Not found.")),
             }
         }

@@ -5,99 +5,19 @@
 // you may not use this file except in compliance with the License.
 // A copy of the License has been included in the root of the repository.
 
-// Apapted from Hack-o-matic <https://github.com/ChorusOne/hackomatic>.
-// Copyright 2024 Chorus One, licensed Apache 2.0.
-
-use maud::{DOCTYPE, Markup, html};
-use tiny_http::Header;
+use maud::{Markup, html};
 
 use crate::config::Config;
 use crate::database as db;
 use crate::model::{self, Amount, AssetId, Balance, Market, RealizedProfit};
+use crate::routes::Context;
+use crate::routes::{
+    bad_request, conflict, forbidden, not_found, redirect_see_other, respond_html, view_header,
+    view_html_head,
+};
 use crate::{Response, User};
 
-fn respond_html(markup: Markup) -> Response {
-    Response::from_string(markup.into_string()).with_header(
-        Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap(),
-    )
-}
-
-fn respond_error<R: Into<String>>(reason: R) -> Response {
-    let page = html! {
-        (view_html_head("Predict-o-matic Error"))
-        body {
-            div .main-error {
-                h1 { "D’oh!" }
-                p { (reason.into()) }
-            }
-        }
-    };
-    respond_html(page)
-}
-
-pub fn bad_request<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(400)
-}
-
-pub fn not_found<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(404)
-}
-
-fn conflict<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(409)
-}
-
-fn forbidden<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(403)
-}
-
-pub fn internal_error<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(500)
-}
-
-pub fn service_unavailable<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(503)
-}
-
-fn redirect_see_other<R: AsRef<[u8]>>(location: R) -> Response {
-    Response::from_string("")
-        .with_status_code(303)
-        .with_header(Header::from_bytes(&b"Location"[..], location.as_ref()).unwrap())
-}
-
-/// Render the standard header that is the same across all pages.
-fn view_html_head(page_title: &str) -> Markup {
-    html! {
-        (DOCTYPE)
-        head {
-            meta charset="utf-8";
-            link rel="preconnect" href="https://fonts.googleapis.com";
-            link rel="preconnect" href="https://fonts.gstatic.com" crossorigin;
-            link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,700..800;1,900&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet";
-            meta name="viewport" content="width=device-width, initial-scale=1";
-            title { (page_title) }
-            style { (get_stylesheet()) }
-        }
-    }
-}
-
-// In debug mode, we load the stylesheet from disk on the fly, so you can edit
-// without having to rebuild the server.
-#[cfg(debug_assertions)]
-fn get_stylesheet() -> Markup {
-    let data = std::fs::read_to_string("src/style.css")
-        .expect("Need to run from repo root in debug mode.");
-    html! { (data) }
-}
-
-// For a release build, we embed the stylesheet into the binary.
-#[cfg(not(debug_assertions))]
-fn get_stylesheet() -> Markup {
-    let data = include_str!("style.css");
-    html! { (data) }
-}
-
-// Same for the script.
+// See also how we handle the stylesheet in `mod.rs`.
 #[cfg(debug_assertions)]
 fn get_trade_script() -> Markup {
     let data =
@@ -110,156 +30,19 @@ fn get_trade_script() -> Markup {
     maud::PreEscaped(include_str!("trade.js").to_string())
 }
 
-struct Context<'a> {
-    config: &'a Config,
-    user: &'a User,
-    user_points: Amount,
+/// A user's position in a given market.
+struct MarketPosition<'a> {
+    owner: &'a str,
+    balance: &'a Balance,
+
+    /// Current market value of the outcome shares held, in points.
+    market_value: Amount,
+
+    /// Market value minus amount deposited, in points.
+    unrealized_pnl: Amount,
 }
 
-impl<'a> Context<'a> {
-    pub fn new(
-        config: &'a Config,
-        user: &'a User,
-        tx: &mut db::Transaction,
-    ) -> db::Result<Context<'a>> {
-        let user_points_account = model::ensure_points_account(tx, &config.app, &user.email)?;
-        let user_points = model::get_account_balance(tx, user_points_account)?;
-        let ctx = Context {
-            config,
-            user,
-            user_points,
-        };
-        Ok(ctx)
-    }
-
-    pub fn market_url(&self, market: &Market, suffix: &str) -> String {
-        format!(
-            "{}/market/{}{}",
-            self.config.server.prefix, market.slug, suffix
-        )
-    }
-
-    fn view_email<'b>(&self, email: &'b str) -> &'b str {
-        match email.strip_suffix(&self.config.app.email_suffix) {
-            Some(stripped) => stripped,
-            None => email,
-        }
-    }
-}
-
-fn view_header(ctx: &Context) -> Markup {
-    html! {
-        nav {
-            h1 {
-                a href=(ctx.config.server.prefix) { "Predict-o-matic" }
-            }
-            " "
-            span .balance {
-                (format!("$\u{200a}{:.2}", ctx.user_points))
-            }
-            " "
-            span .user {
-                (ctx.user.email)
-            }
-        }
-    }
-}
-
-fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
-    let dist = market.implied_distribution();
-    let ps = dist.ps();
-
-    let teaser = match market.resolution() {
-        None => html! { p .teaser { (format!("{:.0}%", ps[0] * 100.0)) } },
-        Some(outcome) => html! {
-            p
-                .teaser .resolved
-                title=(format!("Resolved as {}.", outcome.value))
-                { (outcome.value) }
-        },
-    };
-
-    html! {
-        div .market {
-            h2 {
-                a href=(ctx.market_url(market, "")) {
-                    (market.title)
-                }
-            }
-            div .summary {
-                (teaser)
-                (view_market_stats(market, &ps))
-            }
-        }
-    }
-}
-
-fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
-    let url = |suffix| format!("{}{}", ctx.config.server.prefix, suffix);
-    html! {
-        (view_html_head("Predict-o-matic"))
-        body {
-            (view_header(ctx))
-            div .main {
-                section {
-                    p {
-                        "Welcome to the prediction market support system. "
-                        "Check out one of the markets below to start trading."
-                    }
-                    @for market in markets {
-                        (view_market_summary(ctx, market))
-                    }
-                }
-                aside {
-                    h3 { "Account" }
-                    p {
-                        a href=(url("/assets")) { "Assets" } br;
-                        a href=(url("/trades")) { "Trade history" } br;
-                        a href=(url("/ranking")) { "Ranking" }
-                    }
-                    h3 { "Help" }
-                    p {
-                        a href=(url("/help")) { "User guide" } br;
-                        a href="https://github.com/ChorusOne/predictomatic" { "Source code" }
-                    }
-                    @if ctx.user.is_admin {
-                        h3 { "Administration" }
-                        p {
-                            a href=(url("/create")) { "Create market" } br;
-                            a href=(url("/bonus")) { "Distribute bonus" } br;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-pub fn handle_index(
-    config: &Config,
-    tx: &mut db::Transaction,
-    user: &User,
-) -> db::Result<Response> {
-    let ctx = Context::new(config, user, tx)?;
-
-    // TODO: iterate the markets at once rather than getting them by id to save
-    // a bit of interop, but it's SQLite so we are not even saving a round-trip,
-    // and it's a hackathon so YOLO.
-    let market_slugs: Vec<_> = db::get_market_slugs(tx)?.collect();
-    let mut markets = Vec::new();
-    for res_slug in market_slugs {
-        let slug = res_slug?;
-        markets.push(model::get_market_by_slug(tx, &slug)?.expect("We know the market exists."));
-    }
-
-    // Order markets by descending liquidity.
-    markets.sort_by_key(|m| std::cmp::Reverse(m.total_deposited()));
-
-    let body = view_index(&ctx, &markets);
-    Ok(respond_html(body))
-}
-
-fn view_market_stats(market: &Market, implied_probabilities: &[f64]) -> Markup {
+pub fn view_market_stats(market: &Market, implied_probabilities: &[f64]) -> Markup {
     let liquidity = market.total_deposited();
     html! {
         table {
@@ -276,19 +59,6 @@ fn view_market_stats(market: &Market, implied_probabilities: &[f64]) -> Markup {
         }
     }
 }
-
-/// A user's position in a given market.
-struct MarketPosition<'a> {
-    owner: &'a str,
-    balance: &'a Balance,
-
-    /// Current market value of the outcome shares held, in points.
-    market_value: Amount,
-
-    /// Market value minus amount deposited, in points.
-    unrealized_pnl: Amount,
-}
-
 fn view_market_position_aside(market: &Market, position: &MarketPosition) -> Markup {
     html! {
         table {
