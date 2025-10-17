@@ -548,7 +548,7 @@ pub fn handle_trade(
         }
     }
 
-    let amount_in = match amount_in_str {
+    let mut amount_in = match amount_in_str {
         Some(v) if asset_in != AssetId::POINTS => match asset_in.parse_amount(&v) {
             Some(n) => n,
             None => {
@@ -576,9 +576,24 @@ pub fn handle_trade(
     };
 
     if amount_in.0 <= 0 || min_out.0 <= 0 {
-        return Ok(bad_request(
-            "Amount amount_in and min_out must be greater than zero.",
-        ));
+        return Ok(bad_request(format!(
+            "Amount amount_in and min_out must be greater than zero, but got {} and {}.",
+            amount_in, min_out,
+        )));
+    }
+
+    // Due to the way the frontend computes amount_in, it may overestimate the
+    // amount it wants to trade by a slight amount, and that then causes an
+    // constraint violation due to trying to trade more than the available
+    // balance. For small differences we can fix that by limiting amount_in to
+    // the amount we have available to spend.
+    if let Some(user_balance) = market.balances.get(&ctx.user.email) {
+        for b in &user_balance.outcomes {
+            if b.1 == amount_in.1 {
+                amount_in = std::cmp::min(amount_in, *b);
+                break;
+            }
+        }
     }
 
     let amount_out = match market.trade(amount_in, min_out) {

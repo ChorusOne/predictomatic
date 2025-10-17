@@ -70,10 +70,9 @@ impl AssetId {
             return None;
         }
 
-        Some(Amount(
-            integral * 1_000_000 + fractional * integral.signum(),
-            *self,
-        ))
+        let sign = if s.starts_with("-") { -1 } else { 1 };
+
+        Some(Amount(integral * 1_000_000 + fractional * sign, *self))
     }
 }
 
@@ -99,7 +98,7 @@ impl AccountId {
 ///
 /// The integer represents a micro-increment of the asset, i.e. 10^-6.
 #[derive(Copy, Clone, Debug)]
-pub struct Amount(pub i64, AssetId);
+pub struct Amount(pub i64, pub AssetId);
 
 impl Amount {
     /// Cast the amount to a different asset type.
@@ -623,6 +622,20 @@ mod test {
         assert_eq!(
             AssetId::POINTS.parse_amount("-1.000123"),
             Some(Amount(-1_000_123, AssetId::POINTS))
+        );
+
+        // Regression test.
+        assert_eq!(
+            AssetId::POINTS.parse_amount("0.46"),
+            Some(Amount(460_000, AssetId::POINTS))
+        );
+        assert_eq!(
+            AssetId::POINTS.parse_amount("0.079965"),
+            Some(Amount(79965, AssetId::POINTS))
+        );
+        assert_eq!(
+            AssetId::POINTS.parse_amount("-0.079965"),
+            Some(Amount(-79965, AssetId::POINTS))
         );
 
         // Too many decimals, should refuse.

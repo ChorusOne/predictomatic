@@ -16,7 +16,7 @@ use tiny_http::{HeaderField, Method, Request, Server};
 
 use config::Config;
 use database as db;
-use endpoints::{bad_request, internal_error, not_found, service_unavailable};
+use endpoints::{internal_error, not_found, service_unavailable};
 
 mod config;
 mod database;
