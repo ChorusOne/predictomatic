@@ -5,8 +5,9 @@
 // you may not use this file except in compliance with the License.
 // A copy of the License has been included in the root of the repository.
 
-pub mod index;
-pub mod market;
+mod index;
+mod market;
+mod help;
 
 use maud::{DOCTYPE, Markup, html};
 use tiny_http::Header;
@@ -130,7 +131,7 @@ fn get_stylesheet() -> Markup {
 // For a release build, we embed the stylesheet into the binary.
 #[cfg(not(debug_assertions))]
 fn get_stylesheet() -> Markup {
-    let data = include_str!("style.css");
+    let data = include_str!("../style.css");
     html! { (data) }
 }
 
@@ -156,6 +157,7 @@ pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> db:
     match path {
         [] | [""] => index::handle_index(tx, ctx),
         ["market", market_slug] => market::handle_market(tx, ctx, market_slug),
+        ["help"] => help::handle_help(ctx),
         _ => Ok(not_found("Not found.")),
     }
 }

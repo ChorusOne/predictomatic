@@ -63,7 +63,7 @@ fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
                     h3 { "Account" }
                     p {
                         a href=(url("/assets")) { "Assets" } br;
-                        a href=(url("/trades")) { "Trade history" } br;
+                        a href=(url("/ledger")) { "Ledger" } br;
                         a href=(url("/ranking")) { "Ranking" }
                     }
                     h3 { "Help" }

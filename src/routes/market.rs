@@ -26,7 +26,7 @@ fn get_trade_script() -> Markup {
 
 #[cfg(not(debug_assertions))]
 fn get_trade_script() -> Markup {
-    maud::PreEscaped(include_str!("trade.js").to_string())
+    maud::PreEscaped(include_str!("../trade.js").to_string())
 }
 
 /// A user's position in a given market.
