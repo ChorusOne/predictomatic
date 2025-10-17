@@ -176,11 +176,12 @@ impl fmt::Display for Amount {
 
         // Amounts are in micros, so we have 6 decimals by default.
         let amount = self.0 + (pow10_trunc / 2) * self.0.signum();
-        let integral = amount / 1_000_000;
+        let integral = (amount / 1_000_000).abs();
         let fractional = (amount % 1_000_000).abs();
         let fractional_trunc = fractional / pow10_trunc;
+        let sign = if amount < 0 { "-" } else { "" };
 
-        write!(f, "{integral}.{fractional_trunc:>0p$}", p = precision)
+        write!(f, "{sign}{integral}.{fractional_trunc:>0p$}", p = precision)
     }
 }
 
@@ -673,6 +674,11 @@ mod test {
         let x = Amount(1_999_999, AssetId::POINTS);
         assert_eq!(format!("{x}"), "1.999999");
         assert_eq!(format!("{x:.2}"), "2.00");
+
+        // This is a regression test
+        let x = Amount(-50_000, AssetId::POINTS);
+        assert_eq!(format!("{x}"), "-0.050000");
+        assert_eq!(format!("{x:.1}"), "-0.1");
     }
 
     #[test]
