@@ -400,7 +400,7 @@ impl Market {
         };
 
         let q_i_prime = *q_i + amount_in;
-        let logit_i = (-q_i_prime.0 as f64) * 1e-6 * Distribution::PARAM_B;
+        let logit_i = (-q_i_prime.0 as f64) * 1e-6 / Distribution::PARAM_B;
         let q_j_prime = -Distribution::PARAM_B * (dist.invariant - logit_i.exp()).ln();
 
         // Convert the float back to micros again, round down the output

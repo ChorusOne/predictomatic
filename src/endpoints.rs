@@ -561,6 +561,10 @@ pub fn handle_trade(
         }
     };
 
+    println!(
+        "Trading in market {}: {:?}:{amount_in} -> {:?}:{amount_out}",
+        market.slug, asset_in, asset_out
+    );
     model::create_trade(tx, &market, amount_in, amount_out, &ctx.user.email)?;
 
     Ok(redirect_see_other(ctx.market_url(&market, "")))
