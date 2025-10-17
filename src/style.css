@@ -110,7 +110,7 @@ aside table {
     width: 100%;
 }
 
-table.wide td + td, table.wide th + th {
+section table td + td, section table th + th {
     padding-left: 2rem;
 }
 

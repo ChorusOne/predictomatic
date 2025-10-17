@@ -165,6 +165,21 @@ fn view_header(ctx: &Context) -> Markup {
     }
 }
 
+fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
+    let dist = market.implied_distribution();
+    let ps = dist.ps();
+    html! {
+        div .market {
+            h2 {
+                a href=(ctx.market_url(market, "")) {
+                    (market.title)
+                }
+            }
+            (view_market_stats(market, &ps))
+        }
+    }
+}
+
 fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
     html! {
         (view_html_head("Predict-o-matic"))
@@ -172,18 +187,12 @@ fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
             (view_header(ctx))
             div .main {
                 section {
-                    h1 { "Markets" }
+                    p {
+                        "Welcome to the prediction market support system. "
+                        "Check out one of the markets below to start trading."
+                    }
                     @for market in markets {
-                        div .market {
-                            h2 {
-                                a href=(ctx.market_url(market, "")) {
-                                    (market.title)
-                                }
-                            }
-                            p {
-                                "TODO: Add a summary of the prediction here."
-                            }
-                        }
+                        (view_market_summary(ctx, market))
                     }
                 }
             }
@@ -269,7 +278,7 @@ fn view_market_position_aside(market: &Market, position: &MarketPosition) -> Mar
 
 fn view_market_participants(positions: &[MarketPosition]) -> Markup {
     html! {
-        table .wide {
+        table {
             tr {
                 th { "Participant" }
                 th .num { "Deposit" }
