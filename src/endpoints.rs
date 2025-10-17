@@ -330,6 +330,25 @@ fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup 
     }
 }
 
+fn view_market_admin(ctx: &Context, market: &Market) -> Markup {
+    html! {
+        h3 { "Administration" }
+        form method="post" {
+            @for outcome in &market.outcomes {
+                @let url = format!(
+                    "{}/market/{}/resolve/{}",
+                    ctx.config.server.prefix,
+                    market.slug,
+                    outcome.id.0,
+                );
+                button .wide type="submit" formaction=(url) {
+                    "Resolve " (outcome.value)
+                }
+            }
+        }
+    }
+}
+
 fn view_market(ctx: &Context, market: &Market) -> Markup {
     let default_deposit = AssetId::POINTS.micros(10_000_000).min(ctx.user_points);
     let dist = market.implied_distribution();
@@ -421,6 +440,10 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                                 value=(format!("{default_deposit:.2}"));
                         }
                         button type="submit" { "Deposit" }
+                    }
+
+                    @if ctx.user.is_admin {
+                        (view_market_admin(ctx, market))
                     }
                 }
             }

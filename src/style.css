@@ -178,6 +178,10 @@ form button {
     grid-column: 2 / 3;
 }
 
+form button.wide {
+    grid-column: 1 / 3;
+}
+
 form label input {
     grid-column: 2 / 3;
     font-size: 0.9rem;
