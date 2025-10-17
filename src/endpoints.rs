@@ -217,6 +217,9 @@ pub fn handle_index(
         markets.push(model::get_market_by_slug(tx, &slug)?.expect("We know the market exists."));
     }
 
+    // Order markets by descending liquidity.
+    markets.sort_by_key(|m| std::cmp::Reverse(m.total_deposited()));
+
     let body = view_index(&ctx, &markets);
     Ok(respond_html(body))
 }
