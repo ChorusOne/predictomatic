@@ -49,6 +49,14 @@ nav, .main, .main-error {
     margin-top: 3rem;
 }
 
+.main-error h1 {
+    font-size: 3rem;
+    font-weight: 900;
+    font-style: italic;
+    margin-top: 5rem;
+    margin-bottom: 2rem;
+}
+
 nav {
     margin-top: 1.5rem;
     margin-bottom: 3rem;

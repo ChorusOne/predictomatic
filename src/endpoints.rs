@@ -587,7 +587,8 @@ pub fn handle_trade(
             return Ok(conflict(
                 "Order failed. \
                 This can happen if somebody traded just before you, \
-                and the order exceeded your slippage tolerance.",
+                and the order exceeded your slippage tolerance. \
+                Go back, refresh the page, and try again.",
             ));
         }
     };
