@@ -110,13 +110,6 @@ fn get_trade_script() -> Markup {
     maud::PreEscaped(include_str!("trade.js").to_string())
 }
 
-fn view_email<'a>(config: &Config, email: &'a str) -> &'a str {
-    match email.strip_suffix(&config.app.email_suffix) {
-        Some(stripped) => stripped,
-        None => email,
-    }
-}
-
 struct Context<'a> {
     config: &'a Config,
     user: &'a User,
@@ -144,6 +137,13 @@ impl<'a> Context<'a> {
             "{}/market/{}{}",
             self.config.server.prefix, market.slug, suffix
         )
+    }
+
+    fn view_email<'b>(&self, email: &'b str) -> &'b str {
+        match email.strip_suffix(&self.config.app.email_suffix) {
+            Some(stripped) => stripped,
+            None => email,
+        }
     }
 }
 
@@ -283,7 +283,7 @@ fn view_market_position_aside(market: &Market, position: &MarketPosition) -> Mar
     }
 }
 
-fn view_market_participants_open(positions: &[MarketPosition]) -> Markup {
+fn view_market_participants_open(ctx: &Context, positions: &[MarketPosition]) -> Markup {
     html! {
         table {
             tr {
@@ -294,7 +294,7 @@ fn view_market_participants_open(positions: &[MarketPosition]) -> Markup {
             }
             @for position in positions {
                 tr {
-                    td { (position.owner) }
+                    td { (ctx.view_email(position.owner)) }
                     td .num { (format!("$\u{200a}{:.2}", position.balance.points)) }
                     td .num { (format!("$\u{200a}{:.2}", position.market_value)) }
                     td .num { (format!("$\u{200a}{:.2}", position.unrealized_pnl)) }
@@ -304,7 +304,7 @@ fn view_market_participants_open(positions: &[MarketPosition]) -> Markup {
     }
 }
 
-fn view_market_participants_profits(positions: &[RealizedProfit]) -> Markup {
+fn view_market_participants_profits(ctx: &Context, positions: &[RealizedProfit]) -> Markup {
     html! {
         table {
             tr {
@@ -315,7 +315,7 @@ fn view_market_participants_profits(positions: &[RealizedProfit]) -> Markup {
             }
             @for position in positions {
                 tr {
-                    td { (position.owner) }
+                    td { (ctx.view_email(&position.owner)) }
                     td .num { (format!("$\u{200a}{:.2}", position.amount_in)) }
                     td .num { (format!("$\u{200a}{:.2}", position.amount_out)) }
                     td .num { (format!("$\u{200a}{:.2}", position.amount_out - position.amount_in)) }
@@ -473,8 +473,8 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                     p { (market.description) }
                     h2 { "Participants" }
                     @match market.is_open() {
-                        true => (view_market_participants_open(&positions)),
-                        false => (view_market_participants_profits(&market.profits)),
+                        true => (view_market_participants_open(ctx, &positions)),
+                        false => (view_market_participants_profits(ctx, &market.profits)),
                     }
                     h2 { "Activity" }
                     p { "In the future I would like to show a log of trades and comments here." }
