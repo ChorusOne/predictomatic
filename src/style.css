@@ -151,7 +151,7 @@ button:enabled:active {
     border-left-width: 3pt;
 }
 
-input:disabled, button:disabled {
+input:disabled, button:disabled, .slider .knob.disabled {
     background: repeating-linear-gradient(
       -45deg,
       var(--dp),
@@ -183,6 +183,11 @@ form label input {
     font-size: 0.9rem;
     line-height: 1rem;
     text-align: right;
+}
+
+section form {
+    margin-top: 1rem;
+    grid-template-columns: 1fr 5rem 1fr;
 }
 
 .slider {

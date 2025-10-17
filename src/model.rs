@@ -99,7 +99,7 @@ impl AccountId {
 ///
 /// The integer represents a micro-increment of the asset, i.e. 10^-6.
 #[derive(Copy, Clone, Debug)]
-pub struct Amount(i64, AssetId);
+pub struct Amount(pub i64, AssetId);
 
 impl Amount {
     /// Cast the amount to a different asset type.
@@ -297,6 +297,11 @@ pub struct Balance {
 
 /// A probability distribution for the outcomes of a given market.
 pub struct Distribution {
+    /// The value of the LMSR invariant.
+    ///
+    /// The value of the invariant should be the same before and after the trade.
+    invariant: f64,
+
     /// For every outcome, its log-probability.
     ///
     /// Invariant: the logits are normalized such that their exps sum to 1.
@@ -304,20 +309,20 @@ pub struct Distribution {
 }
 
 impl Distribution {
+    // TODO: Make the "B" parameter configurable per market.
+    // Higher values make it harder to change the price.
+    // For now we hard-code it to 10.0.
+    // Need to keep in sync with js.
+    const PARAM_B: f64 = 41.5;
+
     /// Turn AMM pool balances into a probability distribution.
     pub fn from_pool(balance: &Balance) -> Distribution {
-        // TODO: Make the "B" parameter configurable per market.
-        // Higher values make it harder to change the price.
-        // For now we hard-code it to 10.0.
-        // Need to keep in sync with js.
-        let param_b: f64 = 41.5;
-
         let mut logits: Vec<f64> = balance
             .outcomes
             .iter()
             // The points are stored as micros, correct for that to not blow up
             // the exps below.
-            .map(|oc| -(oc.0 as f64) * 1e-6 / param_b)
+            .map(|oc| -(oc.0 as f64) * 1e-6 / Self::PARAM_B)
             .collect();
 
         // In principle this is it, but when we convert to probability, we take
@@ -326,15 +331,17 @@ impl Distribution {
         // a constant from the logit, so we can do that here already.
         let mut exps: Vec<_> = logits.iter().map(|lk| lk.exp()).collect();
         exps.sort_by(|x, y| x.partial_cmp(y).expect("Pool balances must not go to 0."));
-        let ln_total = exps.iter().sum::<f64>().ln();
-        debug_assert!(ln_total.is_finite());
+
+        let invariant: f64 = exps.iter().sum();
+        let ln_invariant = invariant.ln();
+        debug_assert!(ln_invariant.is_finite());
 
         for lk in logits.iter_mut() {
             debug_assert!(lk.is_finite());
-            *lk -= ln_total;
+            *lk -= ln_invariant;
         }
 
-        Distribution { logits }
+        Distribution { invariant, logits }
     }
 
     /// Return the probability for every outcome.
@@ -368,6 +375,52 @@ impl Market {
     /// Return the probability distribution over outcomes implied by the AMM pool balances.
     pub fn implied_distribution(&self) -> Distribution {
         Distribution::from_pool(&self.balances["SYSTEM"])
+    }
+
+    /// Trade against the pool.
+    ///
+    /// The input is the order, amount to sell + minimum output. The return
+    /// value is the actual amount out, which will be at least `min_out`.
+    ///
+    /// Aside from computing the output amount, this validates that the amount
+    /// assets belong to the market.
+    pub fn trade(&self, amount_in: Amount, min_out: Amount) -> Option<Amount> {
+        let pool_balance = &self.balances["SYSTEM"];
+        let dist = Distribution::from_pool(pool_balance);
+
+        // Get the current pool balances. Asset i is the one we sell to the pool,
+        // asset j the one we get out.
+        let q_i = match pool_balance.outcomes.iter().find(|oc| oc.1 == amount_in.1) {
+            Some(b) => b,
+            None => return None,
+        };
+        let q_j = match pool_balance.outcomes.iter().find(|oc| oc.1 == min_out.1) {
+            Some(b) => b,
+            None => return None,
+        };
+
+        let q_i_prime = *q_i + amount_in;
+        let logit_i = (-q_i_prime.0 as f64) * 1e-6 * Distribution::PARAM_B;
+        let q_j_prime = -Distribution::PARAM_B * (dist.invariant - logit_i.exp()).ln();
+
+        // Convert the float back to micros again, round down the output
+        // (in the AMMs advantage, the user's disadvantage) so that the user
+        // cannot exploit rounding errors.
+        let q_j_prime_int = (q_j_prime * 1e6).floor() as i64;
+        let q_j_prime = Amount(q_j_prime_int, min_out.1);
+
+        // TODO: Add a dedicated error for "the pool cannot afford this swap".
+        if q_j_prime.0 < 0 {
+            return None;
+        }
+
+        println!("i:{q_i} j:{q_j} -> i':{q_i_prime} j':{q_j_prime}");
+
+        // The price may have changed since the user constructed the order, so
+        // the order includes a slippage tolerance, we fail it if we don't get
+        // the expected amount out.
+        let delta = *q_j - q_j_prime;
+        if delta >= min_out { Some(delta) } else { None }
     }
 }
 
@@ -480,6 +533,28 @@ pub fn create_deposit(
         let acc_owner = ensure_account(tx, market.id, asset, owner, pos)?;
         create_transfer(tx, event, acc_mint, acc_owner, amount.cast(asset))?;
     }
+
+    Ok(())
+}
+
+pub fn create_trade(
+    tx: &mut Transaction,
+    market: &Market,
+    amount_in: Amount,
+    amount_out: Amount,
+    owner: &str,
+) -> Result<()> {
+    let event = EventId(db::create_event(tx, owner, "Trade")?);
+
+    let pos = AccountConstraint::Positive;
+
+    let acc_pool_0 = ensure_account(tx, market.id, amount_in.1, "SYSTEM", pos)?;
+    let acc_user_0 = ensure_account(tx, market.id, amount_in.1, owner, pos)?;
+    let acc_pool_1 = ensure_account(tx, market.id, amount_out.1, "SYSTEM", pos)?;
+    let acc_user_1 = ensure_account(tx, market.id, amount_out.1, owner, pos)?;
+
+    create_transfer(tx, event, acc_user_0, acc_pool_0, amount_in)?;
+    create_transfer(tx, event, acc_pool_1, acc_user_1, amount_out)?;
 
     Ok(())
 }

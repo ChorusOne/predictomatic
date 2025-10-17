@@ -288,7 +288,7 @@ fn view_market_participants(positions: &[MarketPosition]) -> Markup {
     }
 }
 
-fn view_prediction_binary(market: &Market, ps: &[f64]) -> Markup {
+fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup {
     // The convention is that the first outcome is the positive one.
     let p = ps[0];
     let percentage = format!("{:.1}%", p * 100.0);
@@ -300,10 +300,17 @@ fn view_prediction_binary(market: &Market, ps: &[f64]) -> Markup {
             span .tuser {}
             span .percentage .pmarket { (percentage) }
             span .percentage .puser { (percentage) }
-            span .knob {}
+            span .knob .disabled {}
         }
         p #trade-offer {
             "Move the slider to receive a trade offer."
+        }
+        form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
+            input type="hidden" name="amount_in" value="0";
+            input type="hidden" name="min_out" value="0";
+            input type="hidden" name="asset_in" value="0";
+            input type="hidden" name="asset_out" value="0";
+            button #trade-submit type="submit" disabled { "Trade" }
         }
         noscript {
             "You need to enable Javascript to trade."
@@ -372,7 +379,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
             div .main {
                 section {
                     h1 { (market.title) }
-                    (view_prediction_binary(market, &ps))
+                    (view_prediction_binary(ctx, market, &ps))
                     h2 { "Resolution criteria" }
                     p { (market.description) }
                     h2 { "Participants" }
@@ -488,7 +495,7 @@ pub fn handle_trade(
         Some(market) => market,
     };
 
-    let mut max_in_str = None;
+    let mut amount_in_str = None;
     let mut min_out_str = None;
     let mut asset_in = AssetId::POINTS;
     let mut asset_out = AssetId::POINTS;
@@ -496,46 +503,65 @@ pub fn handle_trade(
     for (key, value) in form_urlencoded::parse(body.as_bytes()) {
         match key.as_ref() {
             // TODO: We can avoid the to_string, but this code is ugly enough as it is.
-            "max_in" => max_in_str = Some(value.to_string()),
+            "amount_in" => amount_in_str = Some(value.to_string()),
             "min_out" => min_out_str = Some(value.to_string()),
             "asset_in" => match i64::from_str(value.as_ref()) {
                 Ok(n) => asset_in = AssetId(n),
                 Err(..) => return Ok(bad_request("Invalid asset id for asset_in.")),
-            }
+            },
             "asset_out" => match i64::from_str(value.as_ref()) {
                 Ok(n) => asset_out = AssetId(n),
                 Err(..) => return Ok(bad_request("Invalid asset id for asset_out.")),
-            }
+            },
             _ => return Ok(bad_request("Unexpected form data.")),
         }
     }
 
-    let max_in = match max_in_str {
-        Some(v) if asset_in != AssetId::POINTS => {
-            match asset_in.parse_amount(&v) {
-                Some(n) => n,
-                None => return Ok(bad_request("Invalid max_in amount or in asset id absent.")),
+    let amount_in = match amount_in_str {
+        Some(v) if asset_in != AssetId::POINTS => match asset_in.parse_amount(&v) {
+            Some(n) => n,
+            None => {
+                return Ok(bad_request(
+                    "Invalid amount_in amount or in asset id absent.",
+                ));
             }
+        },
+        _ => {
+            return Ok(bad_request(
+                "Missing amount_in, asset id, or invalid asset id.",
+            ));
         }
-        _ => return Ok(bad_request("Missing max_in amount or asset id.")),
     };
     let min_out = match min_out_str {
-        Some(v) if asset_out != AssetId::POINTS => {
-            match asset_out.parse_amount(&v) {
-                Some(n) => n,
-                None => return Ok(bad_request("Invalid min_out amount or in asset id absent.")),
-            }
+        Some(v) if asset_out != AssetId::POINTS => match asset_out.parse_amount(&v) {
+            Some(n) => n,
+            None => return Ok(bad_request("Invalid min_out amount or in asset id absent.")),
+        },
+        _ => {
+            return Ok(bad_request(
+                "Missing min_out amount, asset id, or invalid asset id.",
+            ));
         }
-        _ => return Ok(bad_request("Missing min_out amount or asset id.")),
     };
 
-    if max_in <= AssetId::POINTS.zero() || min_out <= AssetId::POINTS.zero() {
-        return Ok(bad_request("Amount max_in and min_out must be greater than zero."));
+    if amount_in.0 <= 0 || min_out.0 <= 0 {
+        return Ok(bad_request(
+            "Amount amount_in and min_out must be greater than zero.",
+        ));
     }
 
-    // TODO: Verify that the asset ids belong to the market.
+    let amount_out = match market.trade(amount_in, min_out) {
+        Some(amount) => amount,
+        None => {
+            return Ok(conflict(
+                "Order failed. \
+                This can happen if somebody traded just before you, \
+                and the order exceeded your slippage tolerance.",
+            ));
+        }
+    };
 
-    unimplemented!("TODO: Handle trade.");
+    model::create_trade(tx, &market, amount_in, amount_out, &ctx.user.email)?;
 
     Ok(redirect_see_other(ctx.market_url(&market, "")))
 }

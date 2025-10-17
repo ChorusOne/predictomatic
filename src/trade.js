@@ -28,38 +28,61 @@ function getProbability(balance) {
 
 // Return the delta in pool shares to bring the implied probability to `p`.
 function getTrade(p) {
-    const newYes = -Math.log(invariant * p) * marketB;
-    const newNo = -Math.log(invariant * (1.0 - p)) * marketB;
-    const dYes = newYes - systemBalance[0];
-    const dNo = newNo - systemBalance[0];
-    const offerElem = document.getElementById("trade-offer");
-    const labelYes = assetLabels[0];
-    const labelNo = assetLabels[1];
+    const new0 = -Math.log(invariant * p) * marketB;
+    const new1 = -Math.log(invariant * (1.0 - p)) * marketB;
+    const d0 = new0 - systemBalance[0];
+    const d1 = new1 - systemBalance[1];
 
-    // TODO: Don't hard-code the names here.
-    if (dYes > 0.005) {
-        const buyNo = (-dNo).toFixed(2);
-        const sellYes = dYes.toFixed(2);
-        const ratio = -dNo / dYes;
+    var trade = null;
+
+    // The deltas are the delas in the *pool balance*, not the deltas in the
+    // user's balance, but the trade is from the point of view of the user.
+    if (d0 > 0.005) {
+        trade = {
+            assetBuy: 1,
+            assetSell: 0,
+            amountBuy: -d1,
+            amountSell: d0,
+        };
+    } else if (d1 > 0.005) {
+        trade = {
+            assetBuy: 0,
+            assetSell: 1,
+            amountBuy: -d0,
+            amountSell: d1,
+        };
+    }
+
+    const offerElem = document.getElementById("trade-offer");
+
+    if (trade !== null) {
+        const amountBuy = trade.amountBuy.toFixed(2);
+        const amountSell = trade.amountSell.toFixed(2);
+        const labelBuy = assetLabels[trade.assetBuy];
+        const labelSell = assetLabels[trade.assetSell];
+        const ratio = trade.amountBuy / trade.amountSell;
         const costPoints = (1.0 / (ratio + 1.0)).toFixed(2);
-        offerElem.innerText =
-          `Trade offer: ${buyNo} ${labelNo} for ${sellYes} ${labelYes}. ` +
-          `(Average price: 1 ${labelNo} = $\u{200a}${costPoints}.)`;
-    } else if (dNo > 0.005) {
-        const buyYes = (-dYes).toFixed(2);
-        const sellNo = dNo.toFixed(2);
-        const ratio = -dYes / dNo;
-        const costPoints = (1.0 / (ratio + 1.0)).toFixed(2);
-        offerElem.innerText =
-          `Trade offer: ${buyYes} ${labelYes} for ${sellNo} ${labelNo}. ` +
-          `(Average price: 1 ${labelYes} = $\u{200a}${costPoints}.)`;
+
+        offerElem.innerText = (
+            "Trade offer: "
+            + `Buy ${amountBuy} ${labelBuy} for ${amountSell} ${labelSell}. `
+            + `(Average price: 1 ${labelBuy} = $\u{200a}${costPoints}.)`
+        );
+
+        document.trade_form.asset_in.value = assetIds[trade.assetSell];
+        document.trade_form.asset_out.value = assetIds[trade.assetBuy];
+        document.trade_form.amount_in.value = trade.amountSell.toFixed(2);
+        // Build in 2% slippage tolerance.
+        // TODO: Let the user pick.
+        document.trade_form.min_out.value = (trade.amountBuy * 0.98).toFixed(6);
     } else if (canTrade) {
         offerElem.innerText = "Move the slider to receive a trade offer.";
     } else {
         offerElem.innerText = "To participate in this market, first deposit some funds on the right.";
     }
 
-    console.log(p, newYes, newNo, getProbability([newYes, newNo]));
+    const submitButton = document.getElementById("trade-submit");
+    submitButton.disabled = trade === null;
 }
 
 function initializeSlider() {
@@ -70,6 +93,10 @@ function initializeSlider() {
     const pMarket = widget.getElementsByClassName("pmarket")[0];
     const tUser = widget.getElementsByClassName("tuser")[0];
     const pUser = widget.getElementsByClassName("puser")[0];
+
+    if (canTrade) {
+        knob.classList.remove("disabled");
+    }
 
     var startX = 0.0;
     var startY = 0.0;
