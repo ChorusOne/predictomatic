@@ -81,6 +81,7 @@ nav span {
     display: grid;
     grid-template-columns: 5fr 2fr;
     grid-template-areas: 'main aside';
+    margin-bottom: 3rem;
 }
 
 section {
