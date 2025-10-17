@@ -385,7 +385,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                     h2 { "Participants" }
                     (view_market_participants(&positions))
                     h2 { "Activity" }
-                    p { "I could show a log of trades and comments here." }
+                    p { "In the future I would like to show a log of trades and comments here." }
                 }
                 aside {
                     (view_market_stats(market, &ps))
