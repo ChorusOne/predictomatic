@@ -263,17 +263,21 @@ fn view_market_position_aside(market: &Market, position: &MarketPosition) -> Mar
                     td .num { (format!("{pos:.2}")) }
                 }
             }
-            tr {
-                td { "Market value"}
-                td .num { (format!("$\u{200a}{:.2}", position.market_value))}
-            }
-            tr {
-                td { "Deposited"}
-                td .num { (format!("$\u{200a}{:.2}", position.balance.points))}
-            }
-            tr {
-                td { "Unrealized PnL"}
-                td .num { (format!("$\u{200a}{:.2}", position.unrealized_pnl))}
+            // Market value and unrealized UPnL only makes sense if the market
+            // is still open.
+            @if market.is_open() {
+                tr {
+                    td { "Market value"}
+                    td .num { (format!("$\u{200a}{:.2}", position.market_value))}
+                }
+                tr {
+                    td { "Deposited"}
+                    td .num { (format!("$\u{200a}{:.2}", position.balance.points))}
+                }
+                tr {
+                    td { "Unrealized PnL"}
+                    td .num { (format!("$\u{200a}{:.2}", position.unrealized_pnl))}
+                }
             }
         }
     }
@@ -473,8 +477,9 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
 
                     h3 { "Your balance" }
                     @match our_position {
-                        None => { "You are not participating." }
                         Some(pos) => (view_market_position_aside(market, pos)),
+                        None if market.is_open() => { "You are not participating." }
+                        None => { "You did not participate." }
                     }
 
                     @if market.is_open() {
