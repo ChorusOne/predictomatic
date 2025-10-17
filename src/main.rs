@@ -137,28 +137,12 @@ fn handle_request(
     }
 
     with_transaction(connection, |tx| {
-        if request.method() == &Method::Post {
-            match &path_segments[..] {
-                ["market", market_slug, "deposit"] => {
-                    crate::routes::market::handle_deposit(config, tx, &user, market_slug, &body)
-                }
-                ["market", market_slug, "trade"] => {
-                    crate::routes::market::handle_trade(config, tx, &user, market_slug, &body)
-                }
-                ["market", market_slug, "resolve", outcome] => {
-                    crate::routes::market::handle_resolve(config, tx, &user, market_slug, outcome)
-                }
-                _ => Ok(not_found("Not found.")),
-            }
-        } else {
+        let ctx = routes::Context::new(config, &user, tx)?;
+
+        match request.method() {
+            Method::Post => routes::handle_post(tx, &ctx, &path_segments, &body),
             // Assume everything else is a GET request.
-            match &path_segments[..] {
-                [] | [""] => crate::routes::index::handle_index(config, tx, &user),
-                ["market", market_slug] => {
-                    crate::routes::market::handle_market(config, tx, &user, market_slug)
-                }
-                _ => Ok(not_found("Not found.")),
-            }
+            _ => routes::handle_get(tx, &ctx, &path_segments),
         }
     })
 }

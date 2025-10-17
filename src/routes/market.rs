@@ -7,7 +7,7 @@
 
 use maud::{Markup, html};
 
-use crate::config::Config;
+use crate::Response;
 use crate::database as db;
 use crate::model::{self, Amount, AssetId, Balance, Market, RealizedProfit};
 use crate::routes::Context;
@@ -15,7 +15,6 @@ use crate::routes::{
     bad_request, conflict, forbidden, not_found, redirect_see_other, respond_html, view_header,
     view_html_head,
 };
-use crate::{Response, User};
 
 // See also how we handle the stylesheet in `mod.rs`.
 #[cfg(debug_assertions)]
@@ -320,29 +319,25 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
 }
 
 pub fn handle_market(
-    config: &Config,
     tx: &mut db::Transaction,
-    user: &User,
+    ctx: &Context,
     market_slug: &str,
 ) -> db::Result<Response> {
-    let ctx = Context::new(config, user, tx)?;
     let market = match model::get_market_by_slug(tx, market_slug)? {
         None => return Ok(not_found("No such market exists.")),
         Some(market) => market,
     };
 
-    let body = view_market(&ctx, &market);
+    let body = view_market(ctx, &market);
     Ok(respond_html(body))
 }
 
 pub fn handle_deposit(
-    config: &Config,
     tx: &mut db::Transaction,
-    user: &User,
+    ctx: &Context,
     market_slug: &str,
     body: &str,
 ) -> db::Result<Response> {
-    let ctx = Context::new(config, user, tx)?;
     let market = match model::get_market_by_slug(tx, market_slug)? {
         None => return Ok(not_found("No such market exists.")),
         Some(market) => market,
@@ -366,20 +361,19 @@ pub fn handle_deposit(
         )));
     }
 
-    model::create_deposit(tx, &market, amount, &user.email)?;
+    model::create_deposit(tx, &market, amount, &ctx.user.email)?;
 
     Ok(redirect_see_other(ctx.market_url(&market, "")))
 }
 
 pub fn handle_trade(
-    config: &Config,
     tx: &mut db::Transaction,
-    user: &User,
+    ctx: &Context,
     market_slug: &str,
     body: &str,
 ) -> db::Result<Response> {
     use std::str::FromStr;
-    let ctx = Context::new(config, user, tx)?;
+
     let market = match model::get_market_by_slug(tx, market_slug)? {
         None => return Ok(not_found("No such market exists.")),
         Some(market) => market,
@@ -477,20 +471,19 @@ pub fn handle_trade(
 }
 
 pub fn handle_resolve(
-    config: &Config,
     tx: &mut db::Transaction,
-    user: &User,
+    ctx: &Context,
     market_slug: &str,
     outcome_str: &str,
 ) -> db::Result<Response> {
     use std::str::FromStr;
-    let ctx = Context::new(config, user, tx)?;
+
     let market = match model::get_market_by_slug(tx, market_slug)? {
         None => return Ok(not_found("No such market exists.")),
         Some(market) => market,
     };
 
-    if !user.is_admin {
+    if !ctx.user.is_admin {
         return Ok(forbidden("Only admins are allowed to resolve markets."));
     }
 

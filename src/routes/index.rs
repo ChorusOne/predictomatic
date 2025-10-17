@@ -7,13 +7,12 @@
 
 use maud::{Markup, html};
 
-use crate::config::Config;
+use crate::Response;
 use crate::database as db;
 use crate::model::{self, Market};
 use crate::routes::Context;
 use crate::routes::market::view_market_stats;
 use crate::routes::{respond_html, view_header, view_html_head};
-use crate::{Response, User};
 
 fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
     let dist = market.implied_distribution();
@@ -85,13 +84,7 @@ fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
     }
 }
 
-pub fn handle_index(
-    config: &Config,
-    tx: &mut db::Transaction,
-    user: &User,
-) -> db::Result<Response> {
-    let ctx = Context::new(config, user, tx)?;
-
+pub fn handle_index(tx: &mut db::Transaction, ctx: &Context) -> db::Result<Response> {
     // TODO: iterate the markets at once rather than getting them by id to save
     // a bit of interop, but it's SQLite so we are not even saving a round-trip,
     // and it's a hackathon so YOLO.
@@ -105,6 +98,6 @@ pub fn handle_index(
     // Order markets by descending liquidity.
     markets.sort_by_key(|m| std::cmp::Reverse(m.total_deposited()));
 
-    let body = view_index(&ctx, &markets);
+    let body = view_index(ctx, &markets);
     Ok(respond_html(body))
 }

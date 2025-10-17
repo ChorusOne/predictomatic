@@ -16,7 +16,7 @@ use crate::database as db;
 use crate::model::{self, Amount, Market};
 use crate::{Response, User};
 
-struct Context<'a> {
+pub struct Context<'a> {
     config: &'a Config,
     user: &'a User,
     user_points: Amount,
@@ -149,5 +149,29 @@ fn view_header(ctx: &Context) -> Markup {
                 (ctx.user.email)
             }
         }
+    }
+}
+
+pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> db::Result<Response> {
+    match path {
+        [] | [""] => index::handle_index(tx, ctx),
+        ["market", market_slug] => market::handle_market(tx, ctx, market_slug),
+        _ => Ok(not_found("Not found.")),
+    }
+}
+
+pub fn handle_post(
+    tx: &mut db::Transaction,
+    ctx: &Context,
+    path: &[&str],
+    body: &str,
+) -> db::Result<Response> {
+    match path {
+        ["market", market_slug, "deposit"] => market::handle_deposit(tx, ctx, market_slug, body),
+        ["market", market_slug, "trade"] => market::handle_trade(tx, ctx, market_slug, body),
+        ["market", market_slug, "resolve", outcome] => {
+            market::handle_resolve(tx, ctx, market_slug, outcome)
+        }
+        _ => Ok(not_found("Not found.")),
     }
 }
