@@ -621,7 +621,6 @@ pub fn create_outcome(tx: &mut Transaction, market_id: i64, value: &str) -> Resu
 
 #[derive(Debug)]
 pub struct Account {
-    pub id: i64,
     pub asset_id: i64,
     pub owner: String,
     pub balance: i64,
@@ -634,8 +633,7 @@ pub fn get_market_accounts<'i, 't, 'a>(
 ) -> Result<Iter<'i, 'a, Account>> {
     let sql = r#"
         select
-            id
-          , asset_id
+            asset_id
           , owner
           , balance
         from
@@ -651,10 +649,9 @@ pub fn get_market_accounts<'i, 't, 'a>(
     statement.bind(1, market_id)?;
     let decode_row = |statement: &Statement| {
         Ok(Account {
-            id: statement.read(0)?,
-            asset_id: statement.read(1)?,
-            owner: statement.read(2)?,
-            balance: statement.read(3)?,
+            asset_id: statement.read(0)?,
+            owner: statement.read(1)?,
+            balance: statement.read(2)?,
         })
     };
     let result = Iter {

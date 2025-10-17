@@ -209,14 +209,10 @@ pub fn create_transfer(
 }
 
 /// Constraints on account balance.
-/// TODO: I don't actually use accounts that can have both,
-/// I could simplify to credit/debit account and single column in db.
 #[derive(Copy, Clone)]
 enum AccountConstraint {
     /// Zero or positive.
     Positive,
-    /// No constraints.
-    Any,
     /// Zero or negative.
     Negative,
 }
@@ -225,14 +221,13 @@ impl AccountConstraint {
     pub fn min_max_balance(&self) -> (Option<i64>, Option<i64>) {
         match self {
             AccountConstraint::Positive => (Some(0), None),
-            AccountConstraint::Any => (None, None),
             AccountConstraint::Negative => (None, Some(0)),
         }
     }
 }
 
 /// Ensure that an account exists for the given (market_id, owner_id, asset_id), return its id.
-pub fn ensure_account(
+fn ensure_account(
     tx: &mut Transaction,
     market_id: MarketId,
     asset_id: AssetId,

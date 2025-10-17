@@ -218,8 +218,7 @@ insert into outcomes (market_id, value)
 -- Return balances of all accounts related to the given market.
 -- @query get_market_accounts(market_id: i64) ->* Account
 select
-    id       -- :i64
-  , asset_id -- :i64
+    asset_id -- :i64
   , owner    -- :str
   , balance  -- :i64
 from
