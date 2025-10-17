@@ -152,9 +152,13 @@ function initializeSlider() {
     knob.addEventListener("touchstart", onDragStart);
 
     const p = getProbability(systemBalance);
-    positionSlider(p);
     setPercentage(tMarket, pMarket, p);
     setPercentage(tUser, pUser, p);
+    if (isOpen) {
+        positionSlider(p);
+    } else {
+        knob.parentElement.removeChild(knob);
+    }
 }
 
 function initialize() {

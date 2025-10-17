@@ -314,18 +314,25 @@ fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup 
             span .percentage .puser { (percentage) }
             span .knob .disabled {}
         }
-        p #trade-offer {
-            "Move the slider to receive a trade offer."
-        }
-        form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
-            input type="hidden" name="amount_in" value="0";
-            input type="hidden" name="min_out" value="0";
-            input type="hidden" name="asset_in" value="0";
-            input type="hidden" name="asset_out" value="0";
-            button #trade-submit type="submit" disabled { "Trade" }
-        }
-        noscript {
-            "You need to enable Javascript to trade."
+        @if market.is_open() {
+            p #trade-offer {
+                "Move the slider to receive a trade offer."
+            }
+            form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
+                input type="hidden" name="amount_in" value="0";
+                input type="hidden" name="min_out" value="0";
+                input type="hidden" name="asset_in" value="0";
+                input type="hidden" name="asset_out" value="0";
+                button #trade-submit type="submit" disabled { "Trade" }
+            }
+            noscript {
+                "You need to enable Javascript to trade."
+            }
+        } else {
+            // TODO: Add a prettier UI for resolved markets.
+            p {
+                "This market is resolved, you can no longer trade here."
+            }
         }
     }
 }
@@ -349,8 +356,27 @@ fn view_market_admin(ctx: &Context, market: &Market) -> Markup {
     }
 }
 
-fn view_market(ctx: &Context, market: &Market) -> Markup {
+fn view_market_deposit_aside(ctx: &Context, market: &Market) -> Markup {
     let default_deposit = AssetId::POINTS.micros(10_000_000).min(ctx.user_points);
+    html! {
+        h3 { "Deposit" }
+        form method="post" action=(ctx.market_url(market, "/deposit")) {
+            label {
+                "Amount "
+                input
+                    name="amount"
+                    type="number"
+                    min="0.00"
+                    max=(ctx.user_points)
+                    step="any"
+                    value=(format!("{default_deposit:.2}"));
+            }
+            button type="submit" { "Deposit" }
+        }
+    }
+}
+
+fn view_market(ctx: &Context, market: &Market) -> Markup {
     let dist = market.implied_distribution();
     let ps = dist.ps();
 
@@ -427,19 +453,8 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                         Some(pos) => (view_market_position_aside(market, pos)),
                     }
 
-                    h3 { "Deposit" }
-                    form method="post" action=(ctx.market_url(market, "/deposit")) {
-                        label {
-                            "Amount "
-                            input
-                                name="amount"
-                                type="number"
-                                min="0.00"
-                                max=(ctx.user_points)
-                                step="any"
-                                value=(format!("{default_deposit:.2}"));
-                        }
-                        button type="submit" { "Deposit" }
+                    @if market.is_open() {
+                        (view_market_deposit_aside(ctx, market))
                     }
 
                     @if ctx.user.is_admin {
@@ -448,6 +463,11 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                 }
             }
             script {
+                @if market.is_open() {
+                    "const isOpen = true;\n"
+                } @else {
+                    "const isOpen = false;\n"
+                }
                 "const systemBalance = [" @for b in balance_system { (b) ", " } "];\n"
                 "const userBalance = [" @for b in balance_user { (b) ", " } "];\n"
                 "const assetIds = [" @for oc in &market.outcomes { (oc.id.0) ", " } "];\n"
