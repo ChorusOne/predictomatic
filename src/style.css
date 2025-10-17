@@ -27,7 +27,7 @@ body {
     color: var(--fg);
 }
 
-h1, h2, h3, .percentage, .resolution {
+h1, h2, h3, .percentage, .resolution, .teaser {
     font-family: 'Work Sans', 'Atkinson Hyperlegible', sans-serif;
 }
 
@@ -273,6 +273,28 @@ section form {
     margin-top: 3rem;
 }
 
-.market p {
-    margin-bottom: 0.5rem;
+.market .summary {
+    margin-top: 0.8rem;
+    display: grid;
+    grid-template-columns: 5.2rem 0.7rem auto 1fr;
+    grid-template-areas: 'teaser _1 stats _2';
+}
+
+.market .summary .teaser {
+    grid-area: teaser;
+    border-radius: 0.3rem;
+    border: 2pt solid var(--fg);
+    text-align: center;
+    font-size: 1.5rem;
+    line-height: 5.2rem;
+    font-weight: 600;
+}
+
+.market .summary .teaser.resolved {
+    background-color: var(--fg);
+    color: var(--dp);
+}
+
+.market .summary table {
+    grid-area: stats;
 }

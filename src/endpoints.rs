@@ -168,6 +168,17 @@ fn view_header(ctx: &Context) -> Markup {
 fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
     let dist = market.implied_distribution();
     let ps = dist.ps();
+
+    let teaser = match market.resolution() {
+        None => html! { p .teaser { (format!("{:.0}%", ps[0] * 100.0)) } },
+        Some(outcome) => html! {
+            p
+                .teaser .resolved
+                title=(format!("Resolved as {}.", outcome.value))
+                { (outcome.value) }
+        },
+    };
+
     html! {
         div .market {
             h2 {
@@ -175,7 +186,10 @@ fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
                     (market.title)
                 }
             }
-            (view_market_stats(market, &ps))
+            div .summary {
+                (teaser)
+                (view_market_stats(market, &ps))
+            }
         }
     }
 }
@@ -327,11 +341,9 @@ fn view_market_participants_profits(ctx: &Context, positions: &[RealizedProfit])
 
 fn view_resolution(market: &Market) -> Markup {
     html! {
-        @for outcome in &market.outcomes {
-            @if outcome.is_resolution {
-                p .resolution { (outcome.value) }
-                p { "This market is resolved, you can no longer trade here." }
-            }
+        @if let Some(outcome) = market.resolution() {
+            p .resolution { (outcome.value) }
+            p { "This market is resolved, you can no longer trade here." }
         }
     }
 }

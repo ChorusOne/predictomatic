@@ -379,6 +379,11 @@ impl Market {
         self.profits.is_empty()
     }
 
+    /// If the market is resolved, return the oucome it resolved to.
+    pub fn resolution(&self) -> Option<&Outcome> {
+        self.outcomes.iter().find(|oc| oc.is_resolution)
+    }
+
     /// Return the amount of points deposited into this market.
     pub fn total_deposited(&self) -> Amount {
         let mut sum = AssetId::POINTS.zero();
