@@ -61,15 +61,16 @@ create table if not exists markets
 , kind        text not null
 , title       text not null
 , description text not null
-, resolved_in integer null references events (id)
 , unique (slug)
 , unique (title)
 );
 
 create table if not exists outcomes
-( id        integer primary key
-, market_id integer not null references markets (id)
-, value     text not null
+( id          integer primary key
+, market_id   integer not null references markets (id)
+, value       text not null
+  -- The event in which this outcome was picked as the resolution.
+, resolved_in integer null references events (id)
 , unique (market_id, value)
 );
 
@@ -171,7 +172,6 @@ select
   , kind        -- :str
   , title       -- :str
   , description -- :str
-  , resolved_in -- :i64?
 from
   markets
 where
@@ -198,9 +198,16 @@ insert into
 
 -- Return the possible outcomes of a given market.
 -- @query get_outcomes(market_id: i64) ->* Outcome
-select id /* :i64 */, value /* :str */ from outcomes
-  where market_id = :market_id
-  order by id asc;
+select
+    id          -- :i64
+  , value       -- :str
+  , resolved_in -- :i64?
+from
+  outcomes
+where
+  market_id = :market_id
+order by
+  id asc;
 
 -- Insert an outcome, return its id.
 -- @query create_outcome(market_id: i64, value: str) ->1 i64
@@ -253,3 +260,6 @@ where
   market_id = :market_id
 order by
   amount_in - amount_out;
+
+-- @query create_resolution(outcome_id: i64, event_id: i64)
+update outcomes set resolved_in = :event_id where id = :outcome_id;

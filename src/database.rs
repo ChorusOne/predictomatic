@@ -162,7 +162,6 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
         , kind        text not null
         , title       text not null
         , description text not null
-        , resolved_in integer null references events (id)
         , unique (slug)
         , unique (title)
         );
@@ -179,9 +178,11 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
 
     let sql = r#"
         create table if not exists outcomes
-        ( id        integer primary key
-        , market_id integer not null references markets (id)
-        , value     text not null
+        ( id          integer primary key
+        , market_id   integer not null references markets (id)
+        , value       text not null
+          -- The event in which this outcome was picked as the resolution.
+        , resolved_in integer null references events (id)
         , unique (market_id, value)
         );
         "#;
@@ -461,7 +462,6 @@ pub struct Market {
     pub kind: String,
     pub title: String,
     pub description: String,
-    pub resolved_in: Option<i64>,
 }
 
 pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Market>> {
@@ -472,7 +472,6 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
           , kind
           , title
           , description
-          , resolved_in
         from
           markets
         where
@@ -491,7 +490,6 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
             kind: statement.read(2)?,
             title: statement.read(3)?,
             description: statement.read(4)?,
-            resolved_in: statement.read(5)?,
         })
     };
     let result = match statement.next()? {
@@ -556,6 +554,7 @@ pub fn create_market(
 pub struct Outcome {
     pub id: i64,
     pub value: String,
+    pub resolved_in: Option<i64>,
 }
 
 /// Return the possible outcomes of a given market.
@@ -564,9 +563,16 @@ pub fn get_outcomes<'i, 't, 'a>(
     market_id: i64,
 ) -> Result<Iter<'i, 'a, Outcome>> {
     let sql = r#"
-        select id, value from outcomes
-          where market_id = :market_id
-          order by id asc;
+        select
+            id
+          , value
+          , resolved_in
+        from
+          outcomes
+        where
+          market_id = :market_id
+        order by
+          id asc;
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),
@@ -578,6 +584,7 @@ pub fn get_outcomes<'i, 't, 'a>(
         Ok(Outcome {
             id: statement.read(0)?,
             value: statement.read(1)?,
+            resolved_in: statement.read(2)?,
         })
     };
     let result = Iter {
@@ -737,6 +744,24 @@ pub fn get_realized_profits<'i, 't, 'a>(
     let result = Iter {
         statement,
         decode_row,
+    };
+    Ok(result)
+}
+
+pub fn create_resolution(tx: &mut Transaction, outcome_id: i64, event_id: i64) -> Result<()> {
+    let sql = r#"
+        update outcomes set resolved_in = :event_id where id = :outcome_id;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, event_id)?;
+    statement.bind(2, outcome_id)?;
+    let result = match statement.next()? {
+        Row => panic!("Query 'create_resolution' unexpectedly returned a row."),
+        Done => (),
     };
     Ok(result)
 }

@@ -27,7 +27,7 @@ body {
     color: var(--fg);
 }
 
-h1, h2, h3, .percentage {
+h1, h2, h3, .percentage, .resolution {
     font-family: 'Work Sans', 'Atkinson Hyperlegible', sans-serif;
 }
 
@@ -111,6 +111,14 @@ h3 {
     line-height: 1.6rem;
     font-size: 1.1rem;
     margin-top: 1.6rem;
+}
+
+.resolution {
+    text-align: center;
+    line-height: 10rem;
+    font-size: 6rem;
+    font-weight: 900;
+    font-style: italic;
 }
 
 /* TODO: Make even the table in the content area 100% width? It looks better ... */

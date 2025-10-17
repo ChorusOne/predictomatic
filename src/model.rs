@@ -280,6 +280,7 @@ pub fn get_account_balance(tx: &mut Transaction, account_id: AccountId) -> Resul
 pub struct Outcome {
     pub id: OutcomeId,
     pub value: String,
+    pub is_resolution: bool,
 }
 
 /// The balances of accounts related to a market for a given owner.
@@ -454,6 +455,7 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
         outcomes.push(Outcome {
             id: OutcomeId(outcome.id, market_id),
             value: outcome.value,
+            is_resolution: outcome.resolved_in.is_some(),
         });
     }
 
@@ -635,6 +637,9 @@ pub fn create_resolution(tx: &mut Transaction, market: &Market, outcome: Outcome
             )?;
         }
     }
+
+    // Mark the outcome as being the one that the market resolved to.
+    db::create_resolution(tx, outcome.0, event.0)?;
 
     Ok(())
 }

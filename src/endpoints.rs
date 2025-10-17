@@ -325,6 +325,17 @@ fn view_market_participants_profits(positions: &[RealizedProfit]) -> Markup {
     }
 }
 
+fn view_resolution(market: &Market) -> Markup {
+    html! {
+        @for outcome in &market.outcomes {
+            @if outcome.is_resolution {
+                p .resolution { (outcome.value) }
+                p { "This market is resolved, you can no longer trade here." }
+            }
+        }
+    }
+}
+
 fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup {
     // The convention is that the first outcome is the positive one.
     let p = ps[0];
@@ -339,25 +350,18 @@ fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup 
             span .percentage .puser { (percentage) }
             span .knob .disabled {}
         }
-        @if market.is_open() {
-            p #trade-offer {
-                "Move the slider to receive a trade offer."
-            }
-            form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
-                input type="hidden" name="amount_in" value="0";
-                input type="hidden" name="min_out" value="0";
-                input type="hidden" name="asset_in" value="0";
-                input type="hidden" name="asset_out" value="0";
-                button #trade-submit type="submit" disabled { "Trade" }
-            }
-            noscript {
-                "You need to enable Javascript to trade."
-            }
-        } @else {
-            // TODO: Add a prettier UI for resolved markets.
-            p {
-                "This market is resolved, you can no longer trade here."
-            }
+        p #trade-offer {
+            "Move the slider to receive a trade offer."
+        }
+        form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
+            input type="hidden" name="amount_in" value="0";
+            input type="hidden" name="min_out" value="0";
+            input type="hidden" name="asset_in" value="0";
+            input type="hidden" name="asset_out" value="0";
+            button #trade-submit type="submit" disabled { "Trade" }
+        }
+        noscript {
+            "You need to enable Javascript to trade."
         }
     }
 }
@@ -461,7 +465,10 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
             div .main {
                 section {
                     h1 { (market.title) }
-                    (view_prediction_binary(ctx, market, &ps))
+                    @match market.is_open() {
+                        true => (view_prediction_binary(ctx, market, &ps)),
+                        false => (view_resolution(market)),
+                    }
                     h2 { "Resolution criteria" }
                     p { (market.description) }
                     h2 { "Participants" }
