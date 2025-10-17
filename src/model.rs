@@ -558,11 +558,7 @@ pub fn create_trade(
     Ok(())
 }
 
-pub fn create_resolution(
-    tx: &mut Transaction,
-    market: &Market,
-    outcome: OutcomeId,
-) -> Result<()> {
+pub fn create_resolution(tx: &mut Transaction, market: &Market, outcome: OutcomeId) -> Result<()> {
     assert_eq!(outcome.1, market.id);
 
     // TODO: Have multiple admins and record which admin resolved?
@@ -603,7 +599,14 @@ pub fn create_resolution(
             // Also record the realized profits to make it easier to show the
             // status of a resolved market.
             let amount_in = balance.points;
-            db::create_realized_profit(tx, market.id.0, event.0, &owner, amount_in.0, amount_out.0)?;
+            db::create_realized_profit(
+                tx,
+                market.id.0,
+                event.0,
+                &owner,
+                amount_in.0,
+                amount_out.0,
+            )?;
         }
     }
 

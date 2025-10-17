@@ -640,7 +640,7 @@ pub fn handle_resolve(
         Ok(i) => match market.outcomes.iter().find(|oc| oc.id.0 == i) {
             None => return Ok(bad_request("That outcome does not exist in this market.")),
             Some(oc) => oc,
-        }
+        },
     };
 
     model::create_resolution(tx, &market, outcome.id)?;

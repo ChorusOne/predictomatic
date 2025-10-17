@@ -61,6 +61,7 @@ create table if not exists markets
 , kind        text not null
 , title       text not null
 , description text not null
+, resolved_in integer null references events (id)
 , unique (slug)
 , unique (title)
 );
@@ -170,6 +171,7 @@ select
   , kind        -- :str
   , title       -- :str
   , description -- :str
+  , resolved_in -- :i64?
 from
   markets
 where
