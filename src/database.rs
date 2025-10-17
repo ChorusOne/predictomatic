@@ -719,7 +719,7 @@ pub fn get_realized_profits<'i, 't, 'a>(
         where
           market_id = :market_id
         order by
-          amount_out - amount_in;
+          amount_in - amount_out;
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),

@@ -374,7 +374,7 @@ impl Market {
     /// Whether it is possible to trade in the market.
     // TODO: Replace with `outcome() -> Option<Outcome>` or something?
     pub fn is_open(&self) -> bool {
-        !self.profits.is_empty()
+        self.profits.is_empty()
     }
 
     /// Return the amount of points deposited into this market.
@@ -487,15 +487,13 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
     }
 
     let mut profits = Vec::new();
-    if market.resolved_in.is_some() {
-        for res_profit in db::get_realized_profits(tx, market.id)? {
-            let profit = res_profit?;
-            profits.push(RealizedProfit {
-                owner: profit.owner,
-                amount_in: Amount(profit.amount_in, AssetId::POINTS),
-                amount_out: Amount(profit.amount_out, AssetId::POINTS),
-            });
-        }
+    for res_profit in db::get_realized_profits(tx, market.id)? {
+        let profit = res_profit?;
+        profits.push(RealizedProfit {
+            owner: profit.owner,
+            amount_in: Amount(profit.amount_in, AssetId::POINTS),
+            amount_out: Amount(profit.amount_out, AssetId::POINTS),
+        });
     }
 
     Ok(Some(Market {

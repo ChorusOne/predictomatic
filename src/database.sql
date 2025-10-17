@@ -252,4 +252,4 @@ from
 where
   market_id = :market_id
 order by
-  amount_out - amount_in;
+  amount_in - amount_out;

@@ -13,7 +13,7 @@ use tiny_http::Header;
 
 use crate::config::Config;
 use crate::database as db;
-use crate::model::{self, Amount, AssetId, Balance, Distribution, Market};
+use crate::model::{self, Amount, AssetId, Balance, Market, RealizedProfit};
 use crate::{Response, User};
 
 fn respond_html(markup: Markup) -> Response {
@@ -279,7 +279,7 @@ fn view_market_position_aside(market: &Market, position: &MarketPosition) -> Mar
     }
 }
 
-fn view_market_participants(positions: &[MarketPosition]) -> Markup {
+fn view_market_participants_open(positions: &[MarketPosition]) -> Markup {
     html! {
         table {
             tr {
@@ -294,6 +294,27 @@ fn view_market_participants(positions: &[MarketPosition]) -> Markup {
                     td .num { (format!("$\u{200a}{:.2}", position.balance.points)) }
                     td .num { (format!("$\u{200a}{:.2}", position.market_value)) }
                     td .num { (format!("$\u{200a}{:.2}", position.unrealized_pnl)) }
+                }
+            }
+        }
+    }
+}
+
+fn view_market_participants_profits(positions: &[RealizedProfit]) -> Markup {
+    html! {
+        table {
+            tr {
+                th { "Participant" }
+                th .num { "Deposit" }
+                th .num { "Proceeds" }
+                th .num { "Profit" }
+            }
+            @for position in positions {
+                tr {
+                    td { (position.owner) }
+                    td .num { (format!("$\u{200a}{:.2}", position.amount_in)) }
+                    td .num { (format!("$\u{200a}{:.2}", position.amount_out)) }
+                    td .num { (format!("$\u{200a}{:.2}", position.amount_out - position.amount_in)) }
                 }
             }
         }
@@ -328,7 +349,7 @@ fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup 
             noscript {
                 "You need to enable Javascript to trade."
             }
-        } else {
+        } @else {
             // TODO: Add a prettier UI for resolved markets.
             p {
                 "This market is resolved, you can no longer trade here."
@@ -440,7 +461,10 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                     h2 { "Resolution criteria" }
                     p { (market.description) }
                     h2 { "Participants" }
-                    (view_market_participants(&positions))
+                    @match market.is_open() {
+                        true => (view_market_participants_open(&positions)),
+                        false => (view_market_participants_profits(&market.profits)),
+                    }
                     h2 { "Activity" }
                     p { "In the future I would like to show a log of trades and comments here." }
                 }
@@ -457,7 +481,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                         (view_market_deposit_aside(ctx, market))
                     }
 
-                    @if ctx.user.is_admin {
+                    @if ctx.user.is_admin && market.is_open() {
                         (view_market_admin(ctx, market))
                     }
                 }
