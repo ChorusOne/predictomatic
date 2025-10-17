@@ -449,10 +449,6 @@ pub fn handle_market(
         Some(market) => market,
     };
 
-    for (o, bs) in market.balances.iter() {
-        println!("{o} -> {bs:?}");
-    }
-
     let body = view_market(&ctx, &market);
     Ok(respond_html(body))
 }
