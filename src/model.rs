@@ -682,6 +682,10 @@ mod test {
         let x = Amount(-50_000, AssetId::POINTS);
         assert_eq!(format!("{x}"), "-0.050000");
         assert_eq!(format!("{x:.1}"), "-0.1");
+
+        let x = Amount(0, AssetId::POINTS);
+        assert_eq!(format!("{x}"), "0.000000");
+        assert_eq!(format!("{x:.1}"), "0.0");
     }
 
     #[test]
