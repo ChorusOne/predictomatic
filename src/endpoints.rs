@@ -617,6 +617,37 @@ pub fn handle_trade(
     Ok(redirect_see_other(ctx.market_url(&market, "")))
 }
 
+pub fn handle_resolve(
+    config: &Config,
+    tx: &mut db::Transaction,
+    user: &User,
+    market_slug: &str,
+    outcome_str: &str,
+) -> db::Result<Response> {
+    use std::str::FromStr;
+    let ctx = Context::new(config, user, tx)?;
+    let market = match model::get_market_by_slug(tx, market_slug)? {
+        None => return Ok(not_found("No such market exists.")),
+        Some(market) => market,
+    };
+
+    if !user.is_admin {
+        return Ok(forbidden("Only admins are allowed to resolve markets."));
+    }
+
+    let outcome = match i64::from_str(outcome_str) {
+        Err(..) => return Ok(bad_request("Invalid outcome id.")),
+        Ok(i) => match market.outcomes.iter().find(|oc| oc.id.0 == i) {
+            None => return Ok(bad_request("That outcome does not exist in this market.")),
+            Some(oc) => oc,
+        }
+    };
+
+    model::create_resolution(tx, &market, outcome.id)?;
+
+    Ok(redirect_see_other(ctx.market_url(&market, "")))
+}
+
 /// Validate user inputs against length limits and Unicode subset.
 ///
 /// Users should be able to input text, but allowing any Unicode code point

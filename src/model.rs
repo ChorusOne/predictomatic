@@ -15,7 +15,7 @@ use crate::database::{self as db, Transaction};
 
 type Result<T> = db::Result<T>;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct MarketId(i64);
 
 impl MarketId {
@@ -554,6 +554,58 @@ pub fn create_trade(
 
     create_transfer(tx, event, acc_user_0, acc_pool_0, amount_in)?;
     create_transfer(tx, event, acc_pool_1, acc_user_1, amount_out)?;
+
+    Ok(())
+}
+
+pub fn create_resolution(
+    tx: &mut Transaction,
+    market: &Market,
+    outcome: OutcomeId,
+) -> Result<()> {
+    assert_eq!(outcome.1, market.id);
+
+    // TODO: Have multiple admins and record which admin resolved?
+    let event = EventId(db::create_event(tx, "SYSTEM", "Resolve")?);
+
+    // As a first step, move all points that are escrowed in individual accounts
+    // into the market's points account, so we can pay out from there.
+    let pos = AccountConstraint::Positive;
+    let pool_points = ensure_account(tx, market.id, AssetId::POINTS, "SYSTEM", pos)?;
+
+    for (owner, balance) in market.balances.iter() {
+        if owner == "SYSTEM" {
+            continue;
+        }
+        let user_points = ensure_account(tx, market.id, AssetId::POINTS, &owner, pos)?;
+        create_transfer(tx, event, user_points, pool_points, balance.points)?;
+    }
+
+    // Now we again walk all participants and their balances, and we pay out the
+    // points that everybody is due.
+    for (owner, balance) in market.balances.iter() {
+        for oc in &balance.outcomes {
+            // TODO: Destroy the outcome shares?
+
+            if oc.1.0 != outcome.0 {
+                // This is not the outcome the market resolved to, it's not
+                // interesting to us.
+                continue;
+            }
+
+            // Pay out the participant, from the market's pool account into the
+            // owner's global points account. The participant can be the system
+            // as well as a user.
+            let amount_out = oc.cast(AssetId::POINTS);
+            let user_points = ensure_account(tx, MarketId::NONE, AssetId::POINTS, &owner, pos)?;
+            create_transfer(tx, event, pool_points, user_points, amount_out)?;
+
+            // Also record the realized profits to make it easier to show the
+            // status of a resolved market.
+            let amount_in = balance.points;
+            db::create_realized_profit(tx, market.id.0, event.0, &owner, amount_in.0, amount_out.0)?;
+        }
+    }
 
     Ok(())
 }

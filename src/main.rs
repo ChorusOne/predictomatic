@@ -145,6 +145,9 @@ fn handle_request(
                 ["market", market_slug, "trade"] => {
                     endpoints::handle_trade(config, tx, &user, market_slug, &body)
                 }
+                ["market", market_slug, "resolve", outcome] => {
+                    endpoints::handle_resolve(config, tx, &user, market_slug, &outcome)
+                }
                 _ => Ok(not_found("Not found.")),
             }
         } else {

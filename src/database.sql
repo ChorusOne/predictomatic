@@ -72,6 +72,19 @@ create table if not exists outcomes
 , unique (market_id, value)
 );
 
+-- For resolved markets, we track the realized profit per participant.
+-- Every profit links to a resolution event.
+create table if not exists realized_profits
+( id               integer primary key
+, market_id        integer not null references markets (id)
+, event_id         integer not null references events (id)
+, owner            text    not null
+, amount_in        integer not null
+, amount_out       integer not null
+, unique (market_id, owner)
+, check (amount_in > 0)
+);
+
 -- Create the system points account. This balance can only go negative, as we
 -- mint points from here.
 insert into
@@ -204,3 +217,25 @@ from
   accounts
 where
   market_id = :market_id;
+
+-- @query create_realized_profit(
+--   market_id: i64,
+--   event_id: i64,
+--   owner: str,
+--   amount_in: i64,
+--   amount_out: i64,
+-- )
+insert into realized_profits
+  ( market_id
+  , event_id
+  , owner
+  , amount_in
+  , amount_out
+  )
+values
+  ( :market_id
+  , :event_id
+  , :owner
+  , :amount_in
+  , :amount_out
+  );

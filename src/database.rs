@@ -195,6 +195,30 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     }
 
     let sql = r#"
+        -- For resolved markets, we track the realized profit per participant.
+        -- Every profit links to a resolution event.
+        create table if not exists realized_profits
+        ( id               integer primary key
+        , market_id        integer not null references markets (id)
+        , event_id         integer not null references events (id)
+        , owner            text    not null
+        , amount_in        integer not null
+        , amount_out       integer not null
+        , unique (market_id, owner)
+        , check (amount_in > 0)
+        );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
         -- Create the system points account. This balance can only go negative, as we
         -- mint points from here.
         insert into
@@ -625,6 +649,47 @@ pub fn get_market_accounts<'i, 't, 'a>(
     let result = Iter {
         statement,
         decode_row,
+    };
+    Ok(result)
+}
+
+pub fn create_realized_profit(
+    tx: &mut Transaction,
+    market_id: i64,
+    event_id: i64,
+    owner: &str,
+    amount_in: i64,
+    amount_out: i64,
+) -> Result<()> {
+    let sql = r#"
+        insert into realized_profits
+          ( market_id
+          , event_id
+          , owner
+          , amount_in
+          , amount_out
+          )
+        values
+          ( :market_id
+          , :event_id
+          , :owner
+          , :amount_in
+          , :amount_out
+          );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, market_id)?;
+    statement.bind(2, event_id)?;
+    statement.bind(3, owner)?;
+    statement.bind(4, amount_in)?;
+    statement.bind(5, amount_out)?;
+    let result = match statement.next()? {
+        Row => panic!("Query 'create_realized_profit' unexpectedly returned a row."),
+        Done => (),
     };
     Ok(result)
 }
