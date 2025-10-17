@@ -288,16 +288,16 @@ fn view_market_participants_open(ctx: &Context, positions: &[MarketPosition]) ->
         table {
             tr {
                 th { "Participant" }
-                th .num { "Deposit" }
-                th .num { "Value" }
-                th .num { "UPnL" }
+                th .num { "Deposit ($)" }
+                th .num { "Value ($)" }
+                th .num { "UPnL ($)" }
             }
             @for position in positions {
                 tr {
                     td { (ctx.view_email(position.owner)) }
-                    td .num { (format!("$\u{200a}{:.2}", position.balance.points)) }
-                    td .num { (format!("$\u{200a}{:.2}", position.market_value)) }
-                    td .num { (format!("$\u{200a}{:.2}", position.unrealized_pnl)) }
+                    td .num { (format!("{:.2}", position.balance.points)) }
+                    td .num { (format!("{:.2}", position.market_value)) }
+                    td .num { (format!("{:.2}", position.unrealized_pnl)) }
                 }
             }
         }
@@ -309,16 +309,16 @@ fn view_market_participants_profits(ctx: &Context, positions: &[RealizedProfit])
         table {
             tr {
                 th { "Participant" }
-                th .num { "Deposit" }
-                th .num { "Proceeds" }
-                th .num { "Profit" }
+                th .num { "Deposit ($)" }
+                th .num { "Proceeds ($)" }
+                th .num { "Profit ($)" }
             }
             @for position in positions {
                 tr {
                     td { (ctx.view_email(&position.owner)) }
-                    td .num { (format!("$\u{200a}{:.2}", position.amount_in)) }
-                    td .num { (format!("$\u{200a}{:.2}", position.amount_out)) }
-                    td .num { (format!("$\u{200a}{:.2}", position.amount_out - position.amount_in)) }
+                    td .num { (format!("{:.2}", position.amount_in)) }
+                    td .num { (format!("{:.2}", position.amount_out)) }
+                    td .num { (format!("{:.2}", position.amount_out - position.amount_in)) }
                 }
             }
         }
