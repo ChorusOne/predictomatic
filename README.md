@@ -60,6 +60,15 @@ user_b: git ls-files | entr -r cargo run -- predictomatic_user_b.toml
 [Entr]:     https://eradman.com/entrproject/
 [Hivemind]: https://github.com/DarthSim/hivemind
 
+## Ideas
+
+ * [ ] Add the ability for an admin to close a market before resolving it.
+ * [ ] Render the price history on the market page.
+ * [ ] Add a way to create markets without the config file.
+ * [ ] Infer the LMSR proportionality factor from the initial pool balance.
+ * [ ] Markets with more than 2 outcomes.
+ * [ ] Markets with continuous outcomes (e.g. predicting on a date).
+
 ## License
 
 The Predict-o-matic is a fork of the [Hack-o-matic][hackomatic] by Chorus One.
