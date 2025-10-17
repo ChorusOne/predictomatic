@@ -131,7 +131,7 @@ fn handle_request(
         // Read the body, ignore any IO errors there. In most cases this is
         // probably fine and we'll fail elsewhere, but it might happen that
         // we read a truncated body and fail half-way.
-        if let Err(_) = request.as_reader().read_to_string(&mut body) {
+        if request.as_reader().read_to_string(&mut body).is_err() {
             return Ok(internal_error("Failed to read full request body."));
         }
     }
@@ -146,7 +146,7 @@ fn handle_request(
                     endpoints::handle_trade(config, tx, &user, market_slug, &body)
                 }
                 ["market", market_slug, "resolve", outcome] => {
-                    endpoints::handle_resolve(config, tx, &user, market_slug, &outcome)
+                    endpoints::handle_resolve(config, tx, &user, market_slug, outcome)
                 }
                 _ => Ok(not_found("Not found.")),
             }

@@ -135,10 +135,16 @@ impl std::ops::Sub for Amount {
 
 impl std::cmp::PartialOrd for Amount {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl std::cmp::Ord for Amount {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Technically with *partial* cmp we should return `None`, but even
         // attempting to compare is a bug so we should panic.
         assert_eq!(self.1, other.1, "Comparing amounts for different assets.");
-        self.0.partial_cmp(&other.0)
+        self.0.cmp(&other.0)
     }
 }
 
@@ -151,20 +157,10 @@ impl std::cmp::PartialEq for Amount {
 
 impl std::cmp::Eq for Amount {}
 
-impl std::cmp::Ord for Amount {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        assert_eq!(self.1, other.1, "Comparing amounts for different assets.");
-        self.0.cmp(&other.0)
-    }
-}
-
 impl fmt::Display for Amount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Unless a different format was selected, print in full precision.
-        let precision = match f.precision() {
-            Some(n) => n,
-            None => 6,
-        };
+        let precision = f.precision().unwrap_or(6);
 
         debug_assert!(
             precision <= 6,
@@ -405,14 +401,8 @@ impl Market {
 
         // Get the current pool balances. Asset i is the one we sell to the pool,
         // asset j the one we get out.
-        let q_i = match pool_balance.outcomes.iter().find(|oc| oc.1 == amount_in.1) {
-            Some(b) => b,
-            None => return None,
-        };
-        let q_j = match pool_balance.outcomes.iter().find(|oc| oc.1 == min_out.1) {
-            Some(b) => b,
-            None => return None,
-        };
+        let q_i = pool_balance.outcomes.iter().find(|oc| oc.1 == amount_in.1)?;
+        let q_j = pool_balance.outcomes.iter().find(|oc| oc.1 == min_out.1)?;
 
         let q_i_prime = *q_i + amount_in;
         let logit_i = (-q_i_prime.0 as f64) * 1e-6 / Distribution::PARAM_B;
@@ -603,7 +593,7 @@ pub fn create_resolution(tx: &mut Transaction, market: &Market, outcome: Outcome
         if owner == "SYSTEM" {
             continue;
         }
-        let user_points = ensure_account(tx, market.id, AssetId::POINTS, &owner, pos)?;
+        let user_points = ensure_account(tx, market.id, AssetId::POINTS, owner, pos)?;
         create_transfer(tx, event, user_points, pool_points, balance.points)?;
     }
 
@@ -625,7 +615,7 @@ pub fn create_resolution(tx: &mut Transaction, market: &Market, outcome: Outcome
             // people who made a profit of 0.
             let amount_out = oc.cast(AssetId::POINTS);
             if amount_out > AssetId::POINTS.zero() {
-                let user_points = ensure_account(tx, MarketId::NONE, AssetId::POINTS, &owner, pos)?;
+                let user_points = ensure_account(tx, MarketId::NONE, AssetId::POINTS, owner, pos)?;
                 create_transfer(tx, event, pool_points, user_points, amount_out)?;
             }
 
@@ -636,7 +626,7 @@ pub fn create_resolution(tx: &mut Transaction, market: &Market, outcome: Outcome
                 tx,
                 market.id.0,
                 event.0,
-                &owner,
+                owner,
                 amount_in.0,
                 amount_out.0,
             )?;
