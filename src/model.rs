@@ -362,7 +362,6 @@ pub struct Market {
     pub slug: String,
     pub title: String,
     pub description: String,
-    pub kind: MarketKind,
     pub outcomes: Vec<Outcome>,
 
     /// For every owner, their balance for this market.
@@ -455,6 +454,9 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
     let kind: MarketKind =
         serde_plain::from_str(&market.kind).expect("Invalid market kind in database.");
 
+    // TODO: Support other kinds of market.
+    assert_eq!(kind, MarketKind::Binary);
+
     let mut outcomes = Vec::new();
     for res_outcome in db::get_outcomes(tx, market.id)? {
         let outcome = res_outcome?;
@@ -466,7 +468,7 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
     }
 
     let mut balances = HashMap::new();
-    let mut default_balance = Balance {
+    let default_balance = Balance {
         outcomes: outcomes
             .iter()
             .map(|oc| AssetId::from(oc.id).zero())
@@ -509,7 +511,6 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
         slug: market.slug,
         title: market.title,
         description: market.description,
-        kind,
         outcomes,
         balances,
         profits,

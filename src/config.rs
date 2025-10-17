@@ -66,7 +66,7 @@ pub struct DatabaseConfig {
     pub path: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum MarketKind {
     #[serde(rename = "binary")]
     Binary,
