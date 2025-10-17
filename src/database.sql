@@ -241,3 +241,15 @@ values
   , :amount_in
   , :amount_out
   );
+
+-- @query get_realized_profits(market_id: i64) ->* RealizedProfit
+select
+    owner      -- :str
+  , amount_in  -- :i64
+  , amount_out -- :i64
+from
+  realized_profits
+where
+  market_id = :market_id
+order by
+  amount_out - amount_in;

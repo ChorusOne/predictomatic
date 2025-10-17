@@ -698,6 +698,49 @@ pub fn create_realized_profit(
     Ok(result)
 }
 
+#[derive(Debug)]
+pub struct RealizedProfit {
+    pub owner: String,
+    pub amount_in: i64,
+    pub amount_out: i64,
+}
+
+pub fn get_realized_profits<'i, 't, 'a>(
+    tx: &'i mut Transaction<'t, 'a>,
+    market_id: i64,
+) -> Result<Iter<'i, 'a, RealizedProfit>> {
+    let sql = r#"
+        select
+            owner
+          , amount_in
+          , amount_out
+        from
+          realized_profits
+        where
+          market_id = :market_id
+        order by
+          amount_out - amount_in;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, market_id)?;
+    let decode_row = |statement: &Statement| {
+        Ok(RealizedProfit {
+            owner: statement.read(0)?,
+            amount_in: statement.read(1)?,
+            amount_out: statement.read(2)?,
+        })
+    };
+    let result = Iter {
+        statement,
+        decode_row,
+    };
+    Ok(result)
+}
+
 // A useless main function, included only to make the example compile with
 // Cargo’s default settings for examples.
 #[allow(dead_code)]
