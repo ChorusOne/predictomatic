@@ -620,10 +620,13 @@ pub fn create_resolution(tx: &mut Transaction, market: &Market, outcome: Outcome
 
             // Pay out the participant, from the market's pool account into the
             // owner's global points account. The participant can be the system
-            // as well as a user.
+            // as well as a user. Transfers must be positive, so we skip over
+            // people who made a profit of 0.
             let amount_out = oc.cast(AssetId::POINTS);
-            let user_points = ensure_account(tx, MarketId::NONE, AssetId::POINTS, &owner, pos)?;
-            create_transfer(tx, event, pool_points, user_points, amount_out)?;
+            if amount_out > AssetId::POINTS.zero() {
+                let user_points = ensure_account(tx, MarketId::NONE, AssetId::POINTS, &owner, pos)?;
+                create_transfer(tx, event, pool_points, user_points, amount_out)?;
+            }
 
             // Also record the realized profits to make it easier to show the
             // status of a resolved market.
