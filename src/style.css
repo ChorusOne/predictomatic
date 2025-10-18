@@ -23,13 +23,10 @@ html {
 }
 
 body {
-    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-family: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', sans-serif;
+    font-optical-sizing: auto;
     line-height: 1.6em;
     color: var(--fg);
-}
-
-h1, h2, h3, .percentage, .resolution, .teaser {
-    font-family: 'Work Sans', 'Atkinson Hyperlegible', sans-serif;
 }
 
 a {
@@ -52,7 +49,7 @@ nav, .main, .main-error {
 
 .main-error h1 {
     font-size: 3rem;
-    font-weight: 900;
+    font-weight: 800;
     font-style: italic;
     margin-top: 5rem;
     margin-bottom: 2rem;
@@ -68,9 +65,9 @@ nav {
 }
 
 nav h1 {
-    font-weight: 900;
-    font-style: italic;
-    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -1pt;
+    font-size: 1.6rem;
     margin-bottom: 1rem;
 }
 
@@ -92,15 +89,15 @@ section {
 section h1 {
     margin-bottom: 1rem;
     font-size: 2.5em;
-    line-height: 2.3rem;
-    font-weight: 800;
+    line-height: 2.6rem;
+    font-weight: 600;
 }
 
 section h2 {
-    margin-top: 2rem;
+    margin-top: 2.4rem;
     margin-bottom: 0.5rem;
-    font-size: 1.6em;
-    line-height: 1;
+    font-size: 1.4rem;
+    line-height: 1.6rem;
     font-weight: 800;
 }
 
@@ -110,8 +107,9 @@ aside {
 }
 
 h3 {
+    font-weight: 700;
+    font-size: 1.05rem;
     line-height: 1.6rem;
-    font-size: 1.1rem;
     margin-top: 1.6rem;
 }
 
@@ -123,8 +121,8 @@ h3:first-child {
     text-align: center;
     line-height: 10rem;
     font-size: 6rem;
-    font-weight: 900;
-    font-style: italic;
+    font-weight: 800;
+    margin-bottom: 1rem;
 }
 
 /* TODO: Make even the table in the content area 100% width? It looks better ... */
@@ -240,8 +238,7 @@ section form {
     left: 50%;
     line-height: 3rem;
     font-size: 2.4rem;
-    font-weight: 900;
-    font-style: italic;
+    font-weight: 800;
     /* Not a table, but when you drag the slider around, with proportional
      * numbers, the width of the label changes, and because it's centered, the
      * entire thing jumps around a bit. Which is not really that bad, but then
@@ -251,7 +248,7 @@ section form {
 }
 
 .slider .pmarket { top: 0.5rem; }
-.slider .puser { bottom: 0.5rem; }
+.slider .puser { bottom: 0.5rem; font-weight: 300; }
 
 .slider .tmarket, .slider .tuser {
     width: 0;
@@ -306,9 +303,9 @@ section form {
 }
 
 .market .summary {
-    margin-top: 0.8rem;
+    margin-top: 1rem;
     display: grid;
-    grid-template-columns: 5.2rem 0.7rem auto 1fr;
+    grid-template-columns: 5.2rem 1.1rem auto 1fr;
     grid-template-areas: 'teaser _1 stats _2';
 }
 
@@ -319,12 +316,13 @@ section form {
     text-align: center;
     font-size: 1.5rem;
     line-height: 5.2rem;
-    font-weight: 600;
+    font-weight: 400;
 }
 
 .market .summary .teaser.resolved {
     background-color: var(--fg);
-    color: var(--dp);
+    color: var(--bg);
+    font-weight: 500;
 }
 
 .market .summary table {

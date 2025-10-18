@@ -121,7 +121,7 @@ fn view_html_head(page_title: &str) -> Markup {
             meta charset="utf-8";
             link rel="preconnect" href="https://fonts.googleapis.com";
             link rel="preconnect" href="https://fonts.gstatic.com" crossorigin;
-            link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,700..800;1,900&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet";
+            link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet";
             meta name="viewport" content="width=device-width, initial-scale=1";
             title { (page_title) }
             style { (get_stylesheet()) }
@@ -135,14 +135,14 @@ fn view_html_head(page_title: &str) -> Markup {
 fn get_stylesheet() -> Markup {
     let data = std::fs::read_to_string("src/style.css")
         .expect("Need to run from repo root in debug mode.");
-    html! { (data) }
+    maud::PreEscaped(data)
 }
 
 // For a release build, we embed the stylesheet into the binary.
 #[cfg(not(debug_assertions))]
 fn get_stylesheet() -> Markup {
     let data = include_str!("../style.css");
-    html! { (data) }
+    maud::PreEscaped(data)
 }
 
 fn view_header(ctx: &Context) -> Markup {
