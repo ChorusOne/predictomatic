@@ -44,7 +44,7 @@ fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
 }
 
 fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
-    let url = |suffix| format!("{}{}", ctx.config_server.prefix, suffix);
+    let url = |suffix| format!("{}{}", ctx.prefix, suffix);
     html! {
         (view_html_head("Predict-o-matic"))
         body {
@@ -71,7 +71,7 @@ fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
                         a href=(url("/help")) { "User guide" } br;
                         a href="https://github.com/ChorusOne/predictomatic" { "Source code" }
                     }
-                    @if ctx.user.is_admin {
+                    @if ctx.is_admin {
                         h3 { "Administration" }
                         p {
                             a href=(url("/create")) { "Create market" } br;

@@ -175,7 +175,7 @@ fn view_market_admin(ctx: &Context, market: &Market) -> Markup {
             @for outcome in &market.outcomes {
                 @let url = format!(
                     "{}/market/{}/resolve/{}",
-                    ctx.config_server.prefix,
+                    ctx.prefix,
                     market.slug,
                     outcome.id.0,
                 );
@@ -231,7 +231,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
     // Sort by descending profit, break ties by sorting by portfolio value.
     positions.sort_by_key(|pos| std::cmp::Reverse((pos.unrealized_pnl, pos.market_value)));
 
-    let our_position = positions.iter().find(|pos| pos.owner == ctx.user.email);
+    let our_position = positions.iter().find(|pos| pos.owner == ctx.user_email);
     let system_position = positions
         .iter()
         .find(|pos| pos.owner == "SYSTEM")
@@ -295,7 +295,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                         (view_market_deposit_aside(ctx, market))
                     }
 
-                    @if ctx.user.is_admin && market.is_open() {
+                    @if ctx.is_admin && market.is_open() {
                         (view_market_admin(ctx, market))
                     }
                 }
@@ -361,7 +361,7 @@ pub fn handle_deposit(
         )));
     }
 
-    model::create_deposit(tx, &market, amount, &ctx.user.email)?;
+    model::create_deposit(tx, &market, amount, &ctx.user_email)?;
 
     Ok(redirect_see_other(ctx.market_url(&market, "")))
 }
@@ -440,7 +440,7 @@ pub fn handle_trade(
     // constraint violation due to trying to trade more than the available
     // balance. For small differences we can fix that by limiting amount_in to
     // the amount we have available to spend.
-    if let Some(user_balance) = market.balances.get(&ctx.user.email) {
+    if let Some(user_balance) = market.balances.get(ctx.user_email) {
         for b in &user_balance.outcomes {
             if b.1 == amount_in.1 {
                 amount_in = std::cmp::min(amount_in, *b);
@@ -465,7 +465,7 @@ pub fn handle_trade(
         "Trading in market {}: {:?}:{amount_in} -> {:?}:{amount_out}",
         market.slug, asset_in, asset_out
     );
-    model::create_trade(tx, &market, amount_in, amount_out, &ctx.user.email)?;
+    model::create_trade(tx, &market, amount_in, amount_out, &ctx.user_email)?;
 
     Ok(redirect_see_other(ctx.market_url(&market, "")))
 }
@@ -483,7 +483,7 @@ pub fn handle_resolve(
         Some(market) => market,
     };
 
-    if !ctx.user.is_admin {
+    if !ctx.is_admin {
         return Ok(forbidden("Only admins are allowed to resolve markets."));
     }
 

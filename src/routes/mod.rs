@@ -12,16 +12,24 @@ mod market;
 use maud::{DOCTYPE, Markup, html};
 use tiny_http::Header;
 
+use crate::Response;
 use crate::config::{AppConfig, ServerConfig};
 use crate::database as db;
 use crate::model::{self, Amount, Market};
-use crate::{Response, User};
 
 pub struct Context<'a> {
-    // TODO: Unify with user in main.
-    config_app: &'a AppConfig,
-    config_server: &'a ServerConfig,
-    user: &'a User,
+    config: &'a AppConfig,
+
+    /// Prefix as which the entire app is being served, from the server config.
+    prefix: &'a str,
+
+    /// Email address of the currently logged in user.
+    user_email: &'a str,
+
+    /// Whether the current user is an admin.
+    is_admin: bool,
+
+    /// The user's liquid balance (in their global points account).
     user_points: Amount,
 }
 
@@ -29,29 +37,27 @@ impl<'a> Context<'a> {
     pub fn new(
         config_app: &'a AppConfig,
         config_server: &'a ServerConfig,
-        user: &'a User,
+        user_email: &'a str,
         tx: &mut db::Transaction,
     ) -> db::Result<Context<'a>> {
-        let user_points_account = model::ensure_points_account(tx, config_app, &user.email)?;
+        let user_points_account = model::ensure_points_account(tx, config_app, &user_email)?;
         let user_points = model::get_account_balance(tx, user_points_account)?;
         let ctx = Context {
-            config_app,
-            config_server,
-            user,
+            config: config_app,
+            prefix: &config_server.prefix,
+            user_email,
+            is_admin: config_app.admin_email == user_email,
             user_points,
         };
         Ok(ctx)
     }
 
     pub fn market_url(&self, market: &Market, suffix: &str) -> String {
-        format!(
-            "{}/market/{}{}",
-            self.config_server.prefix, market.slug, suffix
-        )
+        format!("{}/market/{}{}", self.prefix, market.slug, suffix)
     }
 
     fn view_email<'b>(&self, email: &'b str) -> &'b str {
-        match email.strip_suffix(&self.config_app.email_suffix) {
+        match email.strip_suffix(&self.config.email_suffix) {
             Some(stripped) => stripped,
             None => email,
         }
@@ -143,7 +149,7 @@ fn view_header(ctx: &Context) -> Markup {
     html! {
         nav {
             h1 {
-                a href=(ctx.config_server.prefix) { "Predict-o-matic" }
+                a href=(ctx.prefix) { "Predict-o-matic" }
             }
             " "
             span .balance {
@@ -151,7 +157,7 @@ fn view_header(ctx: &Context) -> Markup {
             }
             " "
             span .user {
-                (ctx.user.email)
+                (ctx.user_email)
             }
         }
     }

@@ -60,11 +60,6 @@ fn connect_database<'conn>(
     Ok(db::Connection::new(raw_connection))
 }
 
-pub struct User {
-    email: String,
-    is_admin: bool,
-}
-
 fn handle_request(
     config_app: &AppConfig,
     config_server: &ServerConfig,
@@ -93,7 +88,9 @@ fn handle_request(
 
     let email = match email {
         None => {
-            return Ok(Response::from_string("Missing authentication header.").with_status_code(401));
+            return Ok(
+                Response::from_string("Missing authentication header.").with_status_code(401)
+            );
         }
         Some(email) => email,
     };
@@ -105,11 +102,6 @@ fn handle_request(
     );
 
     *log_line = format!("{:4?} {} {}", request.method(), request.url(), email);
-
-    let user = User {
-        is_admin: email == config_app.admin_email,
-        email,
-    };
 
     let url_clone = match request.url().strip_prefix(&config_server.prefix) {
         Some(url) => url.to_string(),
@@ -135,7 +127,7 @@ fn handle_request(
     }
 
     with_transaction(connection, |tx| {
-        let ctx = routes::Context::new(config_app, config_server, &user, tx)?;
+        let ctx = routes::Context::new(config_app, config_server, &email, tx)?;
 
         match request.method() {
             Method::Post => routes::handle_post(tx, &ctx, &path_segments, &body),
