@@ -242,6 +242,12 @@ section form {
     font-size: 2.4rem;
     font-weight: 900;
     font-style: italic;
+    /* Not a table, but when you drag the slider around, with proportional
+     * numbers, the width of the label changes, and because it's centered, the
+     * entire thing jumps around a bit. Which is not really that bad, but then
+     * when you compare it with tabular nums, tabular nums are much quieter,
+     * moving the slider is less jarring. */
+    font-variant-numeric: tabular-nums;
 }
 
 .slider .pmarket { top: 0.5rem; }
