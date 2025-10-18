@@ -197,7 +197,7 @@ fn view_market_deposit_aside(ctx: &Context, market: &Market) -> Markup {
                 input
                     #input-deposit-amount
                     name="amount"
-                    value=(format!("{default_deposit:.2}"));
+                    value=(format!("${default_deposit:.2}"));
             }
             button #button-deposit type="submit" { "Deposit" }
         }
@@ -345,10 +345,15 @@ pub fn handle_deposit(
 
     for (key, value) in form_urlencoded::parse(body.as_bytes()) {
         match key.as_ref() {
-            "amount" => match AssetId::POINTS.parse_amount(value.as_ref()) {
-                None => return Ok(bad_request("Failed to parse amount.")),
-                Some(n) => amount = n,
-            },
+            "amount" => {
+                // A dollar sign is optional, we include it in the UI by default
+                // to make things clearer, but it's actually annoying to type so
+                // it's not mandatory.
+                match AssetId::POINTS.parse_amount(value.as_ref().trim_start_matches('$')) {
+                    None => return Ok(bad_request("Failed to parse amount.")),
+                    Some(n) => amount = n,
+                }
+            }
             _ => return Ok(bad_request("Unexpected form data.")),
         }
     }
