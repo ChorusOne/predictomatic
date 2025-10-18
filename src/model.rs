@@ -168,14 +168,24 @@ impl fmt::Display for Amount {
         );
 
         // Round to the requested number of decimal places.
-        let pow10_trunc = 10_i64.pow(6 - precision as u32);
-
         // Amounts are in micros, so we have 6 decimals by default.
+        let pow10_trunc = 10_i64.pow(6 - precision as u32);
         let amount = self.0 + (pow10_trunc / 2) * self.0.signum();
+
         let integral = (amount / 1_000_000).abs();
         let fractional = (amount % 1_000_000).abs();
         let fractional_trunc = fractional / pow10_trunc;
-        let sign = if amount < 0 { "-" } else { "" };
+
+        // Above we took the absolute values, so now we need to put back the
+        // sign. But it can happen that `amount` is negative, but we round
+        // towards zero, then we get "-0.00", which looks weird even though it
+        // maybe makes sense. So only render the minus if the rounded number is
+        // nonzero.
+        let sign = if amount < 0 && (integral > 0 || fractional_trunc > 0) {
+            "-"
+        } else {
+            ""
+        };
 
         write!(f, "{sign}{integral}.{fractional_trunc:>0p$}", p = precision)
     }
@@ -669,6 +679,13 @@ mod test {
         let x = Amount(-50_000, AssetId::POINTS);
         assert_eq!(format!("{x}"), "-0.050000");
         assert_eq!(format!("{x:.1}"), "-0.1");
+
+        // Rounding a small negative number towards zero should not include the
+        // minus sign.
+        let x = Amount(-123, AssetId::POINTS);
+        assert_eq!(format!("{x}"), "-0.000123");
+        assert_eq!(format!("{x:.4}"), "-0.0001");
+        assert_eq!(format!("{x:.3}"), "0.000");
 
         let x = Amount(0, AssetId::POINTS);
         assert_eq!(format!("{x}"), "0.000000");
