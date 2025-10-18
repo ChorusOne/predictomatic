@@ -281,6 +281,10 @@ section form {
     top: calc(50% - 0.6rem - 2pt);
 }
 
+#trade-offer {
+    margin-top: 1rem;
+}
+
 #trade-offer td.amount, #trade-offer td.outcome-label {
     padding-left: 1ex;
 }

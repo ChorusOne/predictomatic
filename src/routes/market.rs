@@ -152,7 +152,7 @@ fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup 
             span .percentage .puser { (percentage) }
             span .knob .disabled {}
         }
-        p #trade-offer {
+        div #trade-offer {
             "Move the slider to receive a trade offer."
         }
         form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {

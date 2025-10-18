@@ -70,7 +70,7 @@ function getTrade(p) {
         const costPrecision = costPoints > 0.90 || costPoints < 0.10 ? 3 : 2;
 
         offerElem.innerHTML = `
-        <strong>Trade offer</strong>
+        <h3>Trade offer</h3>
         <table>
             <tr>
                 <td>You receive</td>
