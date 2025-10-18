@@ -146,10 +146,14 @@ fn get_stylesheet() -> Markup {
 }
 
 fn view_header(ctx: &Context) -> Markup {
+    let root_url = match ctx.prefix {
+        "" => "/",
+        pf => pf,
+    };
     html! {
         nav {
             h1 {
-                a href=(ctx.prefix) { "Predict-o-matic" }
+                a href=(root_url) { "Predict-o-matic" }
             }
             " "
             span .balance {
