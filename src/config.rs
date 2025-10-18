@@ -16,6 +16,7 @@ use serde::{self, Deserialize, Serialize};
 ///
 /// See also the example `predictomatic.toml` in the repository root.
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     pub app: AppConfig,
 
@@ -33,6 +34,7 @@ pub struct Config {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct AppConfig {
     /// The email address of the user who can administer markets.
     pub admin_email: String,
@@ -45,6 +47,7 @@ pub struct AppConfig {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ServerConfig {
     /// The interface address and port to listen on, e.g. `127.0.0.1:5591`.
     pub listen: String,
@@ -69,6 +72,7 @@ pub struct ServerConfig {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DatabaseConfig {
     /// Path to the database file.
     pub path: String,
@@ -89,6 +93,7 @@ impl fmt::Display for MarketKind {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MarketConfig {
     pub slug: String,
     pub title: String,

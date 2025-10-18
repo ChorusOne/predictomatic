@@ -305,7 +305,6 @@ fn main() {
         thread::spawn(move || run_server(&config_app_main, &config.server, &config_database_main));
     threads.push(thread_main);
 
-    #[cfg(debug_assertions)]
     for config_server in config.demo_servers {
         let config_app_demo = config_app.clone();
         let config_database_demo = config_database.clone();
