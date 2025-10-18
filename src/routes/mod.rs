@@ -5,34 +5,38 @@
 // you may not use this file except in compliance with the License.
 // A copy of the License has been included in the root of the repository.
 
+mod help;
 mod index;
 mod market;
-mod help;
 
 use maud::{DOCTYPE, Markup, html};
 use tiny_http::Header;
 
-use crate::config::Config;
+use crate::config::{AppConfig, ServerConfig};
 use crate::database as db;
 use crate::model::{self, Amount, Market};
 use crate::{Response, User};
 
 pub struct Context<'a> {
-    config: &'a Config,
+    // TODO: Unify with user in main.
+    config_app: &'a AppConfig,
+    config_server: &'a ServerConfig,
     user: &'a User,
     user_points: Amount,
 }
 
 impl<'a> Context<'a> {
     pub fn new(
-        config: &'a Config,
+        config_app: &'a AppConfig,
+        config_server: &'a ServerConfig,
         user: &'a User,
         tx: &mut db::Transaction,
     ) -> db::Result<Context<'a>> {
-        let user_points_account = model::ensure_points_account(tx, &config.app, &user.email)?;
+        let user_points_account = model::ensure_points_account(tx, config_app, &user.email)?;
         let user_points = model::get_account_balance(tx, user_points_account)?;
         let ctx = Context {
-            config,
+            config_app,
+            config_server,
             user,
             user_points,
         };
@@ -42,12 +46,12 @@ impl<'a> Context<'a> {
     pub fn market_url(&self, market: &Market, suffix: &str) -> String {
         format!(
             "{}/market/{}{}",
-            self.config.server.prefix, market.slug, suffix
+            self.config_server.prefix, market.slug, suffix
         )
     }
 
     fn view_email<'b>(&self, email: &'b str) -> &'b str {
-        match email.strip_suffix(&self.config.app.email_suffix) {
+        match email.strip_suffix(&self.config_app.email_suffix) {
             Some(stripped) => stripped,
             None => email,
         }
@@ -139,7 +143,7 @@ fn view_header(ctx: &Context) -> Markup {
     html! {
         nav {
             h1 {
-                a href=(ctx.config.server.prefix) { "Predict-o-matic" }
+                a href=(ctx.config_server.prefix) { "Predict-o-matic" }
             }
             " "
             span .balance {

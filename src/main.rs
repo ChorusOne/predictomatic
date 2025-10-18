@@ -14,7 +14,7 @@ use std::time::Instant;
 
 use tiny_http::{HeaderField, Method, Request, Server};
 
-use crate::config::Config;
+use crate::config::{AppConfig, Config, DatabaseConfig, MarketConfig, ServerConfig};
 use crate::database as db;
 use crate::routes::{internal_error, not_found, service_unavailable};
 
@@ -47,9 +47,8 @@ fn load_config() -> Config {
     }
 }
 
-fn init_database<'conn>(
+fn connect_database<'conn>(
     raw_connection: &'conn sqlite::Connection,
-    markets: &[config::MarketConfig],
 ) -> db::Result<db::Connection<'conn>> {
     // Change the database to WAL mode if it wasn't already. Set the busy
     // timeout to 30 milliseconds, so readers and writers can wait for each
@@ -58,12 +57,7 @@ fn init_database<'conn>(
     raw_connection.execute("PRAGMA busy_timeout = 30;")?;
     raw_connection.execute("PRAGMA journal_mode = WAL;")?;
     raw_connection.execute("PRAGMA foreign_keys = TRUE;")?;
-    let mut connection = db::Connection::new(raw_connection);
-    let mut tx = connection.begin()?;
-    db::ensure_schema_exists(&mut tx)?;
-    model::ensure_markets(&mut tx, markets)?;
-    tx.commit()?;
-    Ok(connection)
+    Ok(db::Connection::new(raw_connection))
 }
 
 pub struct User {
@@ -72,14 +66,22 @@ pub struct User {
 }
 
 fn handle_request(
-    config: &Config,
+    config_app: &AppConfig,
+    config_server: &ServerConfig,
     connection: &mut db::Connection,
     request: &mut Request,
     log_line: &mut String,
 ) -> db::Result<Response> {
-    // Figure out who the user is. In debug mode we fall back to a default.
-    let header_x_email = HeaderField::from_str("X-Email").unwrap();
+    // In development, we can have a fallback email for when the X-Email header
+    // is not present. In release builds we disable that mechanism, because it
+    // sidesteps authentication and is therefore unsafe.
+    #[cfg(debug_assertions)]
+    let mut email = config_server.unsafe_user_email.clone();
+
+    #[cfg(not(debug_assertions))]
     let mut email = None;
+
+    let header_x_email = HeaderField::from_str("X-Email").unwrap();
     for header in request.headers() {
         if header.field == header_x_email {
             // We need to clone the value, because later on we might need to
@@ -88,16 +90,12 @@ fn handle_request(
             email = Some(header.value.to_string());
         }
     }
+
     let email = match email {
+        None => {
+            return Ok(Response::from_string("Missing authentication header.").with_status_code(401));
+        }
         Some(email) => email,
-        None => match config.debug.unsafe_default_email.clone() {
-            Some(fallback) => fallback,
-            None => {
-                return Ok(
-                    Response::from_string("Missing authentication header.").with_status_code(401)
-                );
-            }
-        },
     };
 
     // In the database, owner columns rely on the fact that SYSTEM is a reserved name.
@@ -109,16 +107,16 @@ fn handle_request(
     *log_line = format!("{:4?} {} {}", request.method(), request.url(), email);
 
     let user = User {
-        is_admin: email == config.app.admin_email,
+        is_admin: email == config_app.admin_email,
         email,
     };
 
-    let url_clone = match request.url().strip_prefix(&config.server.prefix) {
+    let url_clone = match request.url().strip_prefix(&config_server.prefix) {
         Some(url) => url.to_string(),
         None => {
             return Ok(not_found(format!(
                 "Not found, try {}",
-                config.server.prefix
+                config_server.prefix
             )));
         }
     };
@@ -137,7 +135,7 @@ fn handle_request(
     }
 
     with_transaction(connection, |tx| {
-        let ctx = routes::Context::new(config, &user, tx)?;
+        let ctx = routes::Context::new(config_app, config_server, &user, tx)?;
 
         match request.method() {
             Method::Post => routes::handle_post(tx, &ctx, &path_segments, &body),
@@ -196,14 +194,25 @@ where
     unreachable!("The number of continuations is bounded.");
 }
 
-fn serve_until_error(config: &Config, connection: &mut db::Connection, server: &Server) {
+fn serve_until_error(
+    config_app: &AppConfig,
+    config_server: &ServerConfig,
+    connection: &mut db::Connection,
+    server: &Server,
+) {
     loop {
         let mut fatal_error = None;
         let mut request = server.recv().unwrap();
         let start_time = Instant::now();
 
         let mut log_line = "Unparsed request".to_string();
-        let response = match handle_request(config, connection, &mut request, &mut log_line) {
+        let response = match handle_request(
+            config_app,
+            config_server,
+            connection,
+            &mut request,
+            &mut log_line,
+        ) {
             Ok(resp) => {
                 println!(
                     "{log_line} -> {} [{:.3} ms]",
@@ -230,26 +239,82 @@ fn serve_until_error(config: &Config, connection: &mut db::Connection, server: &
     }
 }
 
-fn main() {
-    let config = load_config();
-
+fn run_server(
+    config_app: &AppConfig,
+    config_server: &ServerConfig,
+    config_database: &DatabaseConfig,
+) {
     // For now, don't bother making the server multithreaded. See the comment
     // in Hackomatic for more details, something something SQLite concurrent
     // writers ...
-    let server = Server::http(&config.server.listen).unwrap();
+    let server = Server::http(&config_server.listen).unwrap();
+
+    #[cfg(debug_assertions)]
+    let user_annotation = match &config_server.unsafe_user_email {
+        None => "".to_string(),
+        Some(email) => format!(" (development user {email})"),
+    };
+
+    #[cfg(not(debug_assertions))]
+    let user_annotation = "";
+
+    println!(
+        "Serving on http://{}{}{} ...",
+        config_server.listen, config_server.prefix, user_annotation,
+    );
 
     loop {
-        let raw_connection = sqlite::open(&config.database.path).expect("Failed to open database");
-        let mut connection = init_database(&raw_connection, &config.markets)
-            .expect("Failed to initialize database.");
-
-        println!(
-            "Serving on http://{}{} ...",
-            config.server.listen, config.server.prefix
-        );
+        let raw_connection = sqlite::open(&config_database.path).expect("Failed to open database");
+        let mut connection =
+            connect_database(&raw_connection).expect("Failed to initialize database.");
 
         // Handle requests until we encounter a database error.
         // At that point we loop and open a fresh connection.
-        serve_until_error(&config, &mut connection, &server);
+        serve_until_error(config_app, config_server, &mut connection, &server);
+    }
+}
+
+/// Ensure the schema exists, and populate initial markets from the config file.
+fn initialize_database(config: &DatabaseConfig, markets: &[MarketConfig]) -> db::Result<()> {
+    let raw_connection = sqlite::open(&config.path).expect("Failed to open database.");
+    let mut connection = connect_database(&raw_connection).expect("Failed to connect to database.");
+    let mut tx = connection.begin()?;
+    db::ensure_schema_exists(&mut tx)?;
+    model::ensure_markets(&mut tx, markets)?;
+    tx.commit()
+}
+
+fn main() {
+    use std::sync::Arc;
+    use std::thread;
+
+    let config = load_config();
+
+    // Ensure the schema exists, and populate the markets from the config
+    // file if applicable.
+    initialize_database(&config.database, &config.markets).expect("Failed to initialize database.");
+
+    let config_app = Arc::new(config.app);
+    let config_database = Arc::new(config.database);
+
+    let mut threads = Vec::new();
+
+    let config_app_main = config_app.clone();
+    let config_database_main = config_database.clone();
+    let thread_main =
+        thread::spawn(move || run_server(&config_app_main, &config.server, &config_database_main));
+    threads.push(thread_main);
+
+    #[cfg(debug_assertions)]
+    for config_server in config.demo_servers {
+        let config_app_demo = config_app.clone();
+        let config_database_demo = config_database.clone();
+        threads.push(thread::spawn(move || {
+            run_server(&config_app_demo, &config_server, &config_database_demo)
+        }));
+    }
+
+    for thread in threads.into_iter() {
+        thread.join().unwrap();
     }
 }

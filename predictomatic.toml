@@ -1,7 +1,3 @@
-[server]
-listen = "127.0.0.1:5639"
-prefix = "/predict"
-
 [database]
 path = "predictomatic.sqlite3"
 
@@ -10,8 +6,27 @@ admin_email = "admin@example.com"
 email_suffix = "@example.com"
 opening_balance_micros = 100_000_000
 
-[debug]
-unsafe_default_email = "admin@example.com"
+[server]
+listen = "127.0.0.1:5639"
+prefix = "/predict"
+
+# For local development we can start additional servers where different users
+# are logged in by default. These are only accepted when compiling for
+# development, not when compiling in release mode.
+# [[demo_server]]
+# listen = "127.0.0.1:5640"
+# prefix = ""
+# unsafe_user_email  = "admin@example.com"
+
+# [[demo_server]]
+# listen = "127.0.0.1:5641"
+# prefix = ""
+# unsafe_user_email = "henk@example.com"
+
+# [[demo_server]]
+# listen = "127.0.0.1:5642"
+# prefix = ""
+# unsafe_user_email = "piet@example.com"
 
 # The configuration file can contain markets to seed the database. These are
 # primarily intended to make testing in local development easier.

@@ -14,39 +14,34 @@ use serde::{self, Deserialize, Serialize};
 
 /// Application configuration.
 ///
-/// The configuration is trivial, but split into structs anyway to make the
-/// structure of the corresponding toml file a bit nicer.
+/// See also the example `predictomatic.toml` in the repository root.
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub app: AppConfig,
-    #[serde(default)]
-    pub debug: DebugConfig,
-    pub server: ServerConfig,
+
     pub database: DatabaseConfig,
+
+    /// Configuration for the "production" http server.
+    pub server: ServerConfig,
+
+    /// Additional servers to spawn for local development.
+    #[serde(default, rename = "demo_server")]
+    pub demo_servers: Vec<ServerConfig>,
+
     #[serde(default, rename = "market")]
     pub markets: Vec<MarketConfig>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct AppConfig {
-    /// The email address of the user who can administrate markets.
+    /// The email address of the user who can administer markets.
     pub admin_email: String,
 
-    /// The suffix to remove from user emails when listing them.
+    /// The suffix to remove from user emails when displaying them.
     pub email_suffix: String,
 
     /// The opening balance of new users, in 10^-6 points.
     pub opening_balance_micros: i64,
-}
-
-#[derive(Debug, Default, Deserialize)]
-pub struct DebugConfig {
-    /// Use this as fallback email when the `X-Email` header is not set.
-    ///
-    /// In a production deployment, `X-Email` should be set by an authenticating
-    /// proxy such as Oauth2-Proxy. For local development, we allow the header
-    /// to be omitted and instead assume this email when no header is present.
-    pub unsafe_default_email: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -58,6 +53,19 @@ pub struct ServerConfig {
     ///
     /// E.g. `/predict-o-matic`.
     pub prefix: String,
+
+    /// Use this as fallback email when the `X-Email` header is not set.
+    ///
+    /// In a production deployment, `X-Email` should be set by an authenticating
+    /// proxy such as Oauth2-Proxy. For local development, this is a pain to
+    /// configure, so instead we can configure additional demo servers where for
+    /// any request handled by that server, we assume the user with this given
+    /// email address is logged in.
+    ///
+    /// For safety, this field is only supported in development builds.
+    /// A release build will refuse to load unsafe configurations.
+    #[cfg(debug_assertions)]
+    pub unsafe_user_email: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -66,7 +74,7 @@ pub struct DatabaseConfig {
     pub path: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum MarketKind {
     #[serde(rename = "binary")]
     Binary,

@@ -47,18 +47,14 @@ unsafe to use in production.
 
 ## Development
 
-For local development, it can be helpful to set up multiple configuration files
-configured with different port and debug user, but otherwise sharing the same
-settings, in particular sharing the database. You can even set up auto-reload
-with e.g. [Entr], [Hivemind], and a `Procfile` like this:
+For local development, it can be helpful to listen on multiple ports, each with
+a different user configured. You can also set up auto-reload with [Entr]:
 
-```Procfile
-user_a: git ls-files | entr -r cargo run -- predictomatic_user_a.toml
-user_b: git ls-files | entr -r cargo run -- predictomatic_user_b.toml
+```
+git ls-files | entr -r cargo run -- predictomatic.toml
 ```
 
 [Entr]:     https://eradman.com/entrproject/
-[Hivemind]: https://github.com/DarthSim/hivemind
 
 ## Ideas
 

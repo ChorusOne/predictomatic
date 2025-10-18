@@ -44,7 +44,7 @@ fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
 }
 
 fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
-    let url = |suffix| format!("{}{}", ctx.config.server.prefix, suffix);
+    let url = |suffix| format!("{}{}", ctx.config_server.prefix, suffix);
     html! {
         (view_html_head("Predict-o-matic"))
         body {

@@ -175,7 +175,7 @@ fn view_market_admin(ctx: &Context, market: &Market) -> Markup {
             @for outcome in &market.outcomes {
                 @let url = format!(
                     "{}/market/{}/resolve/{}",
-                    ctx.config.server.prefix,
+                    ctx.config_server.prefix,
                     market.slug,
                     outcome.id.0,
                 );
