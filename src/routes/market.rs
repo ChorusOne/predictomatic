@@ -195,14 +195,11 @@ fn view_market_deposit_aside(ctx: &Context, market: &Market) -> Markup {
             label {
                 "Amount "
                 input
+                    #input-deposit-amount
                     name="amount"
-                    type="number"
-                    min="0.00"
-                    max=(ctx.user_points)
-                    step="any"
                     value=(format!("{default_deposit:.2}"));
             }
-            button type="submit" { "Deposit" }
+            button #button-deposit type="submit" { "Deposit" }
         }
     }
 }
@@ -306,6 +303,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                 } @else {
                     "const isOpen = false;\n"
                 }
+                "const userLiquidPoints = " (ctx.user_points) ";\n"
                 "const systemBalance = [" @for b in balance_system { (b) ", " } "];\n"
                 "const userBalance = [" @for b in balance_user { (b) ", " } "];\n"
                 "const assetIds = [" @for oc in &market.outcomes { (oc.id.0) ", " } "];\n"
