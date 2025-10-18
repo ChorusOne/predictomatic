@@ -49,7 +49,7 @@ fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
         (view_html_head("Predict-o-matic"))
         body {
             (view_header(ctx))
-            div .main {
+            div .main .index {
                 section {
                     p {
                         "Welcome to the prediction market support system. "

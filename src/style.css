@@ -82,6 +82,10 @@ nav span {
     margin-bottom: 3rem;
 }
 
+.main.index {
+    grid-template-columns: 4fr 1fr;
+}
+
 section {
     grid-area: main;
 }
