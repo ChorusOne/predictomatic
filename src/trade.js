@@ -26,7 +26,8 @@ function getProbability(balance) {
     return ps[0] / invariant;
 }
 
-// Return the delta in pool shares to bring the implied probability to `p`.
+// Prepare a trade offer, such that after the trade, the market's implied
+// probability is `p`.
 function getTrade(p) {
     const new0 = -Math.log(invariant * p) * marketB;
     const new1 = -Math.log(invariant * (1.0 - p)) * marketB;
@@ -56,18 +57,37 @@ function getTrade(p) {
     const offerElem = document.getElementById("trade-offer");
 
     if (trade !== null) {
-        const amountBuy = trade.amountBuy.toFixed(2);
-        const amountSell = trade.amountSell.toFixed(2);
+        const amountBuy = trade.amountBuy;
+        const amountSell = trade.amountSell;
         const labelBuy = assetLabels[trade.assetBuy];
         const labelSell = assetLabels[trade.assetSell];
         const ratio = trade.amountBuy / trade.amountSell;
-        const costPoints = (1.0 / (ratio + 1.0)).toFixed(2);
+        const costPoints = (1.0 / (ratio + 1.0));
 
-        offerElem.innerText = (
-            "Trade offer: "
-            + `Buy ${amountBuy} ${labelBuy} for ${amountSell} ${labelSell}. `
-            + `(Average price: 1 ${labelBuy} = $\u{200a}${costPoints}.)`
-        );
+        // Usually it's sufficient to quote the price in cents, you're not going
+        // to care about the difference between a 67% and 68% probability. But
+        // at the extreme prices, it may start to matter, so add a decimal there.
+        const costPrecision = costPoints > 0.90 || costPoints < 0.10 ? 3 : 2;
+
+        offerElem.innerHTML = `
+        <strong>Trade offer</strong>
+        <table>
+            <tr>
+                <td>You receive</td>
+                <td class="num amount strong">${amountBuy.toFixed(2)}</td>
+                <td class="outcome-label strong">${labelBuy}</td>
+                <td class="at">at</td>
+                <td class="num price"><strong>$\u{200a}${costPoints.toFixed(costPrecision)}</strong> per share</td>
+            </tr>
+            <tr>
+                <td>You pay</td>
+                <td class="num amount">${amountSell.toFixed(2)}</td>
+                <td class="outcome-label">${labelSell}</td>
+                <td class="at">at</td>
+                <td class="num price">$\u{200a}${(1.0 - costPoints).toFixed(costPrecision)} per share</td>
+            </tr>
+        </table>
+        `;
 
         document.trade_form.asset_in.value = assetIds[trade.assetSell];
         document.trade_form.asset_out.value = assetIds[trade.assetBuy];
@@ -76,6 +96,8 @@ function getTrade(p) {
         // TODO: Let the user pick.
         document.trade_form.min_out.value = (trade.amountBuy * 0.98).toFixed(6);
     } else if (canTrade) {
+        // TODO: This makes the page flicker when you slide past the zero point,
+        // maybe it's better to at least display the regular trade offer table?
         offerElem.innerText = "Move the slider to receive a trade offer.";
     } else {
         offerElem.innerText = "To participate in this market, first deposit some funds on the right.";

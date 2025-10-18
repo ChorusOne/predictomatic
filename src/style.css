@@ -280,6 +280,27 @@ section form {
     top: calc(50% - 0.6rem - 2pt);
 }
 
+#trade-offer td.amount, #trade-offer td.outcome-label {
+    padding-left: 1ex;
+}
+
+#trade-offer td.at, #trade-offer td.price {
+    padding-left: 1.6ex;
+    text-align: left;
+}
+
+#trade-offer td.amount {
+    min-width: 3.2rem;
+}
+
+#trade-offer span {
+    padding-right: 0.1em;
+}
+
+#trade-offer td.strong {
+    font-weight: 600;
+}
+
 .market + .market, p + .market {
     margin-top: 3rem;
 }
