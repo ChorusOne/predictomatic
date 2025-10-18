@@ -141,7 +141,7 @@ table th {
 }
 
 table .num {
-    font-variant-numeric: lining-nums;
+    font-variant-numeric: tabular-nums;
     text-align: right;
 }
 
