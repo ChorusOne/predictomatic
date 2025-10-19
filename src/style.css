@@ -112,8 +112,8 @@ aside {
 }
 
 .main.wider aside {
-    margin-left: 2rem;
-    padding-left: 2rem;
+    margin-left: 2.8rem;
+    padding-left: 2.8rem;
     /* Match the width of the .rule border so that the elements remain in the
      * same place with or without the rule. */
     border-left: 1.5pt solid transparent;
