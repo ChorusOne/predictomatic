@@ -64,6 +64,26 @@ impl<'a> Context<'a> {
             None => email,
         }
     }
+
+    /// Serve a bad request response.
+    ///
+    /// This is just a wrapper, but we add it here because this error is used a
+    /// lot, and it's annoying to write it out by hand all the time.
+    fn bad_request<R: Into<String>>(&self, reason: R) -> db::Result<Response> {
+        Ok(respond_error(self.prefix, reason).with_status_code(400))
+    }
+
+    fn forbidden<R: Into<String>>(&self, reason: R) -> db::Result<Response> {
+        Ok(respond_error(self.prefix, reason).with_status_code(403))
+    }
+
+    fn not_found<R: Into<String>>(&self, reason: R) -> db::Result<Response> {
+        Ok(respond_error(self.prefix, reason).with_status_code(404))
+    }
+
+    fn conflict<R: Into<String>>(&self, reason: R) -> db::Result<Response> {
+        Ok(respond_error(self.prefix, reason).with_status_code(409))
+    }
 }
 
 fn respond_html(markup: Markup) -> Response {
@@ -72,9 +92,9 @@ fn respond_html(markup: Markup) -> Response {
     )
 }
 
-fn respond_error<R: Into<String>>(reason: R) -> Response {
+fn respond_error<R: Into<String>>(server_prefix: &str, reason: R) -> Response {
     let page = html! {
-        (view_html_head("Predict-o-matic Error"))
+        (view_html_head(server_prefix, "Predict-o-matic Error"))
         body {
             div .main-error {
                 h1 { "D’oh!" }
@@ -85,38 +105,26 @@ fn respond_error<R: Into<String>>(reason: R) -> Response {
     respond_html(page)
 }
 
-pub fn bad_request<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(400)
+pub fn internal_error<R: Into<String>>(prefix: &str, reason: R) -> Response {
+    respond_error(prefix, reason).with_status_code(500)
 }
 
-pub fn not_found<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(404)
+pub fn service_unavailable<R: Into<String>>(prefix: &str, reason: R) -> Response {
+    respond_error(prefix, reason).with_status_code(503)
 }
 
-fn conflict<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(409)
-}
-
-fn forbidden<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(403)
-}
-
-pub fn internal_error<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(500)
-}
-
-pub fn service_unavailable<R: Into<String>>(reason: R) -> Response {
-    respond_error(reason).with_status_code(503)
-}
-
-fn redirect_see_other<R: AsRef<[u8]>>(location: R) -> Response {
+pub fn redirect_see_other<R: AsRef<[u8]>>(location: R) -> Response {
     Response::from_string("")
         .with_status_code(303)
         .with_header(Header::from_bytes(&b"Location"[..], location.as_ref()).unwrap())
 }
 
 /// Render the standard header that is the same across all pages.
-fn view_html_head(page_title: &str) -> Markup {
+///
+/// Takes the site-wide prefix from the server config. We don't pass in the
+/// `Context` here because error pages also need this head, and we might
+/// encounter an error before we can construct the full context.
+fn view_html_head(server_prefix: &str, page_title: &str) -> Markup {
     html! {
         (DOCTYPE)
         head {
@@ -124,6 +132,7 @@ fn view_html_head(page_title: &str) -> Markup {
             link rel="preconnect" href="https://fonts.googleapis.com";
             link rel="preconnect" href="https://fonts.gstatic.com" crossorigin;
             link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet";
+            link rel="icon" href={(server_prefix) "/favicon.svg"} sizes="any" type="image/svg+xml";
             meta name="viewport" content="width=device-width, initial-scale=1";
             title { (page_title) }
             style { (get_stylesheet()) }
@@ -145,6 +154,10 @@ fn get_stylesheet() -> Markup {
 fn get_stylesheet() -> Markup {
     let data = include_str!("../style.css");
     maud::PreEscaped(data)
+}
+
+fn get_favicon() -> &'static str {
+    include_str!("../../assets/favicon.svg")
 }
 
 fn view_header(ctx: &Context) -> Markup {
@@ -176,7 +189,7 @@ pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> db:
         ["leaderboard"] => leaderboard::handle_leaderboard(tx, ctx),
         ["market", market_slug] => market::handle_market(tx, ctx, market_slug),
         ["help"] => help::handle_help(ctx),
-        _ => Ok(not_found("Not found.")),
+        _ => ctx.not_found("Not found."),
     }
 }
 
@@ -192,6 +205,6 @@ pub fn handle_post(
         ["market", market_slug, "resolve", outcome] => {
             market::handle_resolve(tx, ctx, market_slug, outcome)
         }
-        _ => Ok(not_found("Not found.")),
+        _ => ctx.not_found("Not found."),
     }
 }

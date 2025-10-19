@@ -11,10 +11,7 @@ use crate::Response;
 use crate::database as db;
 use crate::model::{self, Amount, AssetId, Balance, Market, RealizedProfit};
 use crate::routes::Context;
-use crate::routes::{
-    bad_request, conflict, forbidden, not_found, redirect_see_other, respond_html, view_header,
-    view_html_head,
-};
+use crate::routes::{redirect_see_other, respond_html, view_header, view_html_head};
 
 // See also how we handle the stylesheet in `mod.rs`.
 #[cfg(debug_assertions)]
@@ -283,7 +280,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
         .collect();
 
     html! {
-        (view_html_head(&format!("{} — Predict-o-matic", market.title)))
+        (view_html_head(ctx.prefix, &format!("{} — Predict-o-matic", market.title)))
         body {
             (view_header(ctx))
             div .main {
@@ -347,7 +344,7 @@ pub fn handle_market(
     market_slug: &str,
 ) -> db::Result<Response> {
     let market = match model::get_market_by_slug(tx, market_slug)? {
-        None => return Ok(not_found("No such market exists.")),
+        None => return ctx.not_found("No such market exists."),
         Some(market) => market,
     };
 
@@ -362,7 +359,7 @@ pub fn handle_deposit(
     body: &str,
 ) -> db::Result<Response> {
     let market = match model::get_market_by_slug(tx, market_slug)? {
-        None => return Ok(not_found("No such market exists.")),
+        None => return ctx.not_found("No such market exists."),
         Some(market) => market,
     };
 
@@ -375,18 +372,16 @@ pub fn handle_deposit(
                 // to make things clearer, but it's actually annoying to type so
                 // it's not mandatory.
                 match AssetId::POINTS.parse_amount(value.as_ref().trim_start_matches('$')) {
-                    None => return Ok(bad_request("Failed to parse amount.")),
+                    None => return ctx.bad_request("Failed to parse amount."),
                     Some(n) => amount = n,
                 }
             }
-            _ => return Ok(bad_request("Unexpected form data.")),
+            _ => return ctx.bad_request("Unexpected form data."),
         }
     }
 
     if amount <= AssetId::POINTS.zero() {
-        return Ok(bad_request(format!(
-            "Amount must be greater than 0, but got {amount}."
-        )));
+        return ctx.bad_request(format!("Amount must be greater than 0, but got {amount}."));
     }
 
     model::create_deposit(tx, &market, amount, ctx.user_email)?;
@@ -403,7 +398,7 @@ pub fn handle_trade(
     use std::str::FromStr;
 
     let market = match model::get_market_by_slug(tx, market_slug)? {
-        None => return Ok(not_found("No such market exists.")),
+        None => return ctx.not_found("No such market exists."),
         Some(market) => market,
     };
 
@@ -419,13 +414,13 @@ pub fn handle_trade(
             "min_out" => min_out_str = Some(value.to_string()),
             "asset_in" => match i64::from_str(value.as_ref()) {
                 Ok(n) => asset_in = AssetId(n),
-                Err(..) => return Ok(bad_request("Invalid asset id for asset_in.")),
+                Err(..) => return ctx.bad_request("Invalid asset id for asset_in."),
             },
             "asset_out" => match i64::from_str(value.as_ref()) {
                 Ok(n) => asset_out = AssetId(n),
-                Err(..) => return Ok(bad_request("Invalid asset id for asset_out.")),
+                Err(..) => return ctx.bad_request("Invalid asset id for asset_out."),
             },
-            _ => return Ok(bad_request("Unexpected form data.")),
+            _ => return ctx.bad_request("Unexpected form data."),
         }
     }
 
@@ -433,34 +428,30 @@ pub fn handle_trade(
         Some(v) if asset_in != AssetId::POINTS => match asset_in.parse_amount(&v) {
             Some(n) => n,
             None => {
-                return Ok(bad_request(
-                    "Invalid amount_in amount or in asset id absent.",
-                ));
+                return ctx.bad_request("Invalid amount_in amount or in asset id absent.");
             }
         },
         _ => {
-            return Ok(bad_request(
-                "Missing amount_in, asset id, or invalid asset id.",
-            ));
+            return ctx.bad_request("Missing amount_in, asset id, or invalid asset id.");
         }
     };
     let min_out = match min_out_str {
         Some(v) if asset_out != AssetId::POINTS => match asset_out.parse_amount(&v) {
             Some(n) => n,
-            None => return Ok(bad_request("Invalid min_out amount or in asset id absent.")),
+            None => {
+                return ctx.bad_request("Invalid min_out amount or in asset id absent.");
+            }
         },
         _ => {
-            return Ok(bad_request(
-                "Missing min_out amount, asset id, or invalid asset id.",
-            ));
+            return ctx.bad_request("Missing min_out amount, asset id, or invalid asset id.");
         }
     };
 
     if amount_in.0 <= 0 || min_out.0 <= 0 {
-        return Ok(bad_request(format!(
+        return ctx.bad_request(format!(
             "Amount amount_in and min_out must be greater than zero, but got {} and {}.",
             amount_in, min_out,
-        )));
+        ));
     }
 
     // Due to the way the frontend computes amount_in, it may overestimate the
@@ -480,12 +471,12 @@ pub fn handle_trade(
     let amount_out = match market.trade(amount_in, min_out) {
         Some(amount) => amount,
         None => {
-            return Ok(conflict(
+            return ctx.conflict(
                 "Order failed. \
                 This can happen if somebody traded just before you, \
                 and the order exceeded your slippage tolerance. \
                 Go back, refresh the page, and try again.",
-            ));
+            );
         }
     };
 
@@ -507,18 +498,18 @@ pub fn handle_resolve(
     use std::str::FromStr;
 
     let market = match model::get_market_by_slug(tx, market_slug)? {
-        None => return Ok(not_found("No such market exists.")),
+        None => return ctx.not_found("No such market exists."),
         Some(market) => market,
     };
 
     if !ctx.is_admin {
-        return Ok(forbidden("Only admins are allowed to resolve markets."));
+        return ctx.forbidden("Only admins are allowed to resolve markets.");
     }
 
     let outcome = match i64::from_str(outcome_str) {
-        Err(..) => return Ok(bad_request("Invalid outcome id.")),
+        Err(..) => return ctx.bad_request("Invalid outcome id."),
         Ok(i) => match market.outcomes.iter().find(|oc| oc.id.0 == i) {
-            None => return Ok(bad_request("That outcome does not exist in this market.")),
+            None => return ctx.bad_request("That outcome does not exist in this market."),
             Some(oc) => oc,
         },
     };

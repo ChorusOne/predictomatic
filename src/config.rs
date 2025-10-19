@@ -54,7 +54,8 @@ pub struct ServerConfig {
 
     /// The url prefix, in case the app is not hosted at the root of a domain.
     ///
-    /// E.g. `/predict-o-matic`.
+    /// E.g. `/predict-o-matic`. If the prefix is not empty, it must start with
+    /// a slash. The prefix must not end with a slash.
     pub prefix: String,
 
     /// Use this as fallback email when the `X-Email` header is not set.

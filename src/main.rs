@@ -16,7 +16,7 @@ use tiny_http::{HeaderField, Method, Request, Server};
 
 use crate::config::{AppConfig, Config, DatabaseConfig, MarketConfig, ServerConfig};
 use crate::database as db;
-use crate::routes::{internal_error, not_found, service_unavailable};
+use crate::routes::{internal_error, service_unavailable};
 
 mod config;
 mod database;
@@ -104,9 +104,12 @@ fn handle_request(
     let url_clone = match request.url().strip_prefix(&config_server.prefix) {
         Some(url) => url.to_string(),
         None => {
-            return Ok(not_found(format!(
-                "Not found, try {}",
-                config_server.prefix
+            // When the prefix is not present, redirect to the same url but with
+            // the prefix prepended.
+            return Ok(routes::redirect_see_other(format!(
+                "{}{}",
+                config_server.prefix,
+                request.url()
             )));
         }
     };
@@ -120,11 +123,14 @@ fn handle_request(
         // probably fine and we'll fail elsewhere, but it might happen that
         // we read a truncated body and fail half-way.
         if request.as_reader().read_to_string(&mut body).is_err() {
-            return Ok(internal_error("Failed to read full request body."));
+            return Ok(internal_error(
+                &config_server.prefix,
+                "Failed to read full request body.",
+            ));
         }
     }
 
-    with_transaction(connection, |tx| {
+    with_transaction(&config_server.prefix, connection, |tx| {
         let ctx = routes::Context::new(config_app, config_server, &email, tx)?;
 
         match request.method() {
@@ -140,7 +146,11 @@ fn handle_request(
 /// SQLite does not support concurrent writes, but we do spawn multiple server
 /// threads. It might happen that one of them encounters a concurrency error and
 /// needs to restart the transaction, try that a few times before finally gving up.
-fn with_transaction<F>(connection: &mut db::Connection, mut f: F) -> db::Result<Response>
+fn with_transaction<F>(
+    server_prefix: &str,
+    connection: &mut db::Connection,
+    mut f: F,
+) -> db::Result<Response>
 where
     F: FnMut(&mut db::Transaction) -> db::Result<Response>,
 {
@@ -169,6 +179,7 @@ where
                     continue;
                 } else {
                     return Ok(service_unavailable(
+                        server_prefix,
                         "The database is busy, wait a few seconds and try again.",
                     ));
                 }
@@ -215,7 +226,7 @@ fn serve_until_error(
                 // Some unrecoverable error happened.
                 println!("{log_line} -> Error: {err:?}");
                 fatal_error = Some(err);
-                internal_error("Internal server error.")
+                internal_error(&config_server.prefix, "Internal server error.")
             }
         };
 

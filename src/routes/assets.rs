@@ -69,7 +69,7 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
     let net_worth = total_illiquid + ctx.user_points;
 
     html! {
-        (view_html_head("Assets — Predict-o-matic"))
+        (view_html_head(ctx.prefix, "Assets — Predict-o-matic"))
         body {
             (view_header(ctx))
             div .main .wider {

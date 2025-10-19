@@ -14,7 +14,7 @@ use crate::routes::{respond_html, view_header, view_html_head};
 
 fn view_help(ctx: &Context) -> Markup {
     html! {
-        (view_html_head("Predict-o-matic"))
+        (view_html_head(ctx.prefix, "Predict-o-matic"))
         body {
             (view_header(ctx))
             div .main {

@@ -29,7 +29,7 @@ struct UserNetWorth {
 
 fn view_net_worth_list(ctx: &Context, users_net_worth: &[(String, UserNetWorth)]) -> Markup {
     html! {
-        (view_html_head("Leaderboard — Predict-o-matic"))
+        (view_html_head(ctx.prefix, "Leaderboard — Predict-o-matic"))
         body {
             (view_header(ctx))
             div .main .wider {

@@ -70,7 +70,7 @@ pub fn view_main_aside(ctx: &Context) -> Markup {
 
 fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
     html! {
-        (view_html_head("Predict-o-matic"))
+        (view_html_head(ctx.prefix, "Predict-o-matic"))
         body {
             (view_header(ctx))
             div .main .wider {
