@@ -89,7 +89,7 @@ fn view_market_position_aside(market: &Market, position: &MarketPosition) -> Mar
 
 fn view_market_participants_open(ctx: &Context, positions: &[MarketPosition]) -> Markup {
     html! {
-        table {
+        table .wide {
             tr {
                 th { "Participant" }
                 th .num { "Deposit ($)" }
@@ -113,7 +113,7 @@ fn view_market_participants_open(ctx: &Context, positions: &[MarketPosition]) ->
 
 fn view_market_participants_profits(ctx: &Context, positions: &[RealizedProfit]) -> Markup {
     html! {
-        table {
+        table .wide {
             tr {
                 th { "Participant" }
                 th .num { "Deposit ($)" }
