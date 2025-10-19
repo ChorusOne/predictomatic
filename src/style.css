@@ -323,8 +323,22 @@ tr.self td.owner:before {
 }
 
 tr.system td.owner {
-    text-transform: lowercase;
     font-style: italic;
+    letter-spacing: 1pt;
+}
+
+/* TODO: Do I end up using this? It works well for an anchor with content "?" */
+.info {
+    display: inline-block;
+    border-radius: 1rem;
+    border: 1.2pt solid var(--fg);
+    width: 0.70rem;
+    height: 0.70rem;
+    line-height: 0.80rem;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 500;
+    font-style: normal;
 }
 
 .market + .market, p + .market {
