@@ -55,7 +55,7 @@ pub fn view_main_aside(ctx: &Context) -> Markup {
         }
         h3 { "Help" }
         p {
-            a href=(url("/help")) { "User guide" } br;
+            a href=(url("/help")) { "User manual" } br;
             a href="https://github.com/ChorusOne/predictomatic" { "Source code" }
         }
         @if ctx.is_admin {
