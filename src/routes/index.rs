@@ -43,13 +43,39 @@ fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
     }
 }
 
-fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
+/// View the main sidebar, used on the index page and some others.
+pub fn view_main_aside(ctx: &Context) -> Markup {
     let url = |suffix| format!("{}{}", ctx.prefix, suffix);
+    html! {
+        aside {
+            h3 { "Account" }
+            p {
+                a href=(url("/assets")) { "Assets" } br;
+                a href=(url("/ledger")) { "Ledger" } br;
+                a href=(url("/ranking")) { "Ranking" }
+            }
+            h3 { "Help" }
+            p {
+                a href=(url("/help")) { "User guide" } br;
+                a href="https://github.com/ChorusOne/predictomatic" { "Source code" }
+            }
+            @if ctx.is_admin {
+                h3 { "Administration" }
+                p {
+                    a href=(url("/create")) { "Create market" } br;
+                    a href=(url("/bonus")) { "Distribute bonus" } br;
+                }
+            }
+        }
+    }
+}
+
+fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
     html! {
         (view_html_head("Predict-o-matic"))
         body {
             (view_header(ctx))
-            div .main .index {
+            div .main .wider {
                 section {
                     p {
                         "Welcome to the prediction market support system. "
@@ -59,26 +85,7 @@ fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
                         (view_market_summary(ctx, market))
                     }
                 }
-                aside {
-                    h3 { "Account" }
-                    p {
-                        a href=(url("/assets")) { "Assets" } br;
-                        a href=(url("/ledger")) { "Ledger" } br;
-                        a href=(url("/ranking")) { "Ranking" }
-                    }
-                    h3 { "Help" }
-                    p {
-                        a href=(url("/help")) { "User guide" } br;
-                        a href="https://github.com/ChorusOne/predictomatic" { "Source code" }
-                    }
-                    @if ctx.is_admin {
-                        h3 { "Administration" }
-                        p {
-                            a href=(url("/create")) { "Create market" } br;
-                            a href=(url("/bonus")) { "Distribute bonus" } br;
-                        }
-                    }
-                }
+                (view_main_aside(ctx))
             }
         }
     }

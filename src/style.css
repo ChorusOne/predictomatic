@@ -25,7 +25,7 @@ html {
 body {
     font-family: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', sans-serif;
     font-optical-sizing: auto;
-    line-height: 1.6em;
+    line-height: 1.7em;
     color: var(--fg);
 }
 
@@ -35,11 +35,12 @@ a {
 }
 
 nav, .main, .main-error {
-    max-width: 50em;
+    min-width: 35em;
+    max-width: 54em;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
 }
 
 .main-error {
@@ -77,13 +78,9 @@ nav span {
 
 .main {
     display: grid;
-    grid-template-columns: 5fr 2.3fr;
+    grid-template-columns: 5fr 2.45fr;
     grid-template-areas: 'main aside';
     margin-bottom: 3rem;
-}
-
-.main.index {
-    grid-template-columns: 5fr 1.5fr;
 }
 
 section {
@@ -101,19 +98,31 @@ section h2 {
     margin-top: 2.4rem;
     margin-bottom: 0.5rem;
     font-size: 1.4rem;
-    line-height: 1.6rem;
+    line-height: 1.7rem;
     font-weight: 800;
 }
 
 aside {
     grid-area: aside;
-    margin-left: 2.5rem;
+    margin-left: 3rem;
+}
+
+.main.wider {
+    grid-template-columns: 5fr 1.7fr;
+}
+
+.main.wider aside {
+    margin-left: 2rem;
+    padding-left: 2rem;
+    /* Hmm, not sure about this rule, but without it, having that navigation
+     * next to e.g. the assets table makes it look like it's part of the table. */
+    border-left: 1.5pt solid var(--fg);
 }
 
 h3 {
     font-weight: 700;
     font-size: 1.05rem;
-    line-height: 1.6rem;
+    line-height: 1.7rem;
     margin-top: 1.6rem;
 }
 
@@ -134,10 +143,8 @@ h3:first-child {
 table {
     width: 100%;
     /* Disable horizontal border-spacing, because it breaks alignment of full-
-     * width tables, it's as if they had a little padding. The space between
-     * rows though, that little breathing room is nice to have so we keep it. */
-    border-spacing: 0pt 2pt;
-
+     * width tables. We compensate by bumping the line spacing globally. */
+    border-spacing: 0;
 }
 
 table td {
@@ -337,8 +344,6 @@ tr.self td.owner:before {
     position: absolute;
     left: -0.8rem;
     font-weight: 600;
-    font-size: 1rem;
-    line-height: 1.6rem;
     content: '›';
 }
 

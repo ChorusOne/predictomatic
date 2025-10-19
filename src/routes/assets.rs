@@ -11,6 +11,7 @@ use crate::Response;
 use crate::database as db;
 use crate::model::{self, Amount, AssetId, Market};
 use crate::routes::Context;
+use crate::routes::index;
 use crate::routes::{respond_html, view_header, view_html_head};
 
 struct MarketAssets<'a> {
@@ -71,7 +72,7 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
         (view_html_head("Predict-o-matic"))
         body {
             (view_header(ctx))
-            div .main .index {
+            div .main .wider {
                 section {
                     // TODO: Would be nice to render a pie chart with top assets
                     // here.
@@ -107,7 +108,7 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
                         }
                     }
                 }
-                // TODO: Add the aside from the index page?
+                (index::view_main_aside(ctx))
             }
         }
     }
