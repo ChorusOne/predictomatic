@@ -56,7 +56,7 @@ git ls-files | entr -r cargo run -- predictomatic.toml
 
 [Entr]:     https://eradman.com/entrproject/
 
-## Ideas
+## Ideas and to dos
 
  * [ ] Add the ability for an admin to close a market before resolving it.
  * [ ] Render the price history on the market page.
@@ -64,6 +64,8 @@ git ls-files | entr -r cargo run -- predictomatic.toml
  * [ ] Infer the LMSR proportionality factor from the initial pool balance.
  * [ ] Markets with more than 2 outcomes.
  * [ ] Markets with continuous outcomes (e.g. predicting on a date).
+ * [ ] Pay active users a stipend, e.g. every 7 days pay X to users who traded
+       in the past 7 days.
 
 ## License
 
