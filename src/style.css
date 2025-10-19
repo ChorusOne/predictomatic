@@ -423,6 +423,6 @@ table tr.market-assets a {
     margin-top: 1.6rem;
 }
 
-table + p {
+section > table + p, section > p + table {
     margin-top: 1.6rem;
 }

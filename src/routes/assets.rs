@@ -203,6 +203,13 @@ fn view_net_worth_list(ctx: &Context, users_net_worth: &[(String, UserNetWorth)]
             (view_header(ctx))
             div .main .wider {
                 section {
+                    p {
+                        "A prediction market is a zero-sum game. "
+                        "Money flows from those who make bad predictions "
+                        "to those who make good predictions. "
+                        "Therefore, net worth is some indicator "
+                        "for who is making good predictions."
+                    }
                     table .wide {
                         tr {
                             th .w2 { "№" }
