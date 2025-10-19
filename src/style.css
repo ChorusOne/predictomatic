@@ -123,9 +123,11 @@ h3:first-child {
 
 .resolution {
     text-align: center;
-    line-height: 10rem;
-    font-size: 6rem;
+    line-height: 6.5rem;
+    font-size: 7rem;
     font-weight: 800;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
     margin-bottom: 1rem;
 }
 
