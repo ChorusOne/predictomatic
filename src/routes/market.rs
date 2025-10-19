@@ -283,7 +283,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
         .collect();
 
     html! {
-        (view_html_head("Predict-o-matic"))
+        (view_html_head(&format!("{} — Predict-o-matic", market.title)))
         body {
             (view_header(ctx))
             div .main {
