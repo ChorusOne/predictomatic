@@ -5,6 +5,7 @@
 // you may not use this file except in compliance with the License.
 // A copy of the License has been included in the root of the repository.
 
+mod assets;
 mod help;
 mod index;
 mod market;
@@ -170,6 +171,7 @@ fn view_header(ctx: &Context) -> Markup {
 pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> db::Result<Response> {
     match path {
         [] | [""] => index::handle_index(tx, ctx),
+        ["assets"] => assets::handle_assets_overview(tx, ctx),
         ["market", market_slug] => market::handle_market(tx, ctx, market_slug),
         ["help"] => help::handle_help(ctx),
         _ => Ok(not_found("Not found.")),

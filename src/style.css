@@ -382,3 +382,7 @@ tr.system td.owner {
 .market .summary table {
     grid-area: stats;
 }
+
+table.wide {
+    width: 100%;
+}
