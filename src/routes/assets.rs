@@ -67,6 +67,8 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
             (view_header(ctx))
             div .main .index {
                 section {
+                    // TODO: Would be nice to render a pie chart with top assets
+                    // here.
                     table .wide {
                         tr {
                             th { "Asset" }
@@ -122,16 +124,17 @@ pub fn handle_assets_overview(tx: &mut db::Transaction, ctx: &Context) -> db::Re
             None => continue,
         };
 
+        let dist = market.implied_distribution();
+
         let mut assets = Vec::with_capacity(market.outcomes.len());
         let mut total_value = AssetId::POINTS.zero();
 
-        for (oc, b) in market.outcomes.iter().zip(balance.outcomes.iter()) {
-            let value = b.cast(AssetId::POINTS);
+        for ((oc, b), p) in market.outcomes.iter().zip(&balance.outcomes).zip(dist.ps()) {
+            let value = b.value_at(p);
             let asset = UserAsset {
                 label: &oc.value,
                 amount: *b,
-                // TODO
-                price: 1.0,
+                price: p,
                 value,
             };
             assets.push(asset);
