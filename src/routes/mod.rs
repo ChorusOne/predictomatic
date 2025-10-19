@@ -9,6 +9,7 @@ mod assets;
 mod help;
 mod index;
 mod leaderboard;
+mod ledger;
 mod market;
 
 use maud::{DOCTYPE, Markup, html};
@@ -202,6 +203,7 @@ pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> db:
         ["icon.svg"] => Ok(respond_svg(get_favicon())),
         ["help"] => help::handle_help(ctx),
         ["leaderboard"] => leaderboard::handle_leaderboard(tx, ctx),
+        ["ledger"] => ledger::handle_ledger(ctx),
         ["market", market_slug] => market::handle_market(tx, ctx, market_slug),
         _ => ctx.not_found("Not found."),
     }
