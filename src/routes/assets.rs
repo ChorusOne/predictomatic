@@ -212,11 +212,11 @@ fn view_net_worth_list(ctx: &Context, users_net_worth: &[(String, UserNetWorth)]
                             th .num .w5 { "Net" br; "Worth ($)" }
                         }
                         @for (i, (owner, net_worth)) in users_net_worth.iter().enumerate() {
-                            tr {
+                            tr .self[owner == ctx.user_email] {
                                 // TODO: View self.
                                 @let rank = i + 1;
-                                td .num { (rank) }
-                                td { (ctx.view_email(owner)) }
+                                td { (rank) }
+                                td .owner { (ctx.view_email(owner)) }
                                 td .num { (format!("{:.0}", net_worth.liquid)) }
                                 td .num { (format!("{:.0}", net_worth.illiquid)) }
                                 td .num { (format!("{:.0}", net_worth.total)) }
