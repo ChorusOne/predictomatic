@@ -78,7 +78,7 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
                 section {
                     // TODO: Would be nice to render a pie chart with top assets
                     // here.
-                    table .wide {
+                    table {
                         tr {
                             th { "Asset" }
                             th .num .w5 { "Amount" }
@@ -210,7 +210,7 @@ fn view_net_worth_list(ctx: &Context, users_net_worth: &[(String, UserNetWorth)]
                         "Therefore, net worth is some indicator "
                         "for who is making good predictions."
                     }
-                    table .wide {
+                    table {
                         tr {
                             th .w2 { "№" }
                             th { "Participant" }
