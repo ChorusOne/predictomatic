@@ -92,6 +92,19 @@ fn respond_html(markup: Markup) -> Response {
     )
 }
 
+fn respond_svg(svg: &str) -> Response {
+    let header_content_type =
+        Header::from_bytes(&b"Content-Type"[..], &b"image/svg+xml; charset=utf-8"[..]).unwrap();
+
+    // Allow the browser to cache for 48 hours.
+    let header_cache_control =
+        Header::from_bytes(&b"Cache-Control"[..], &b"max-age=172800"[..]).unwrap();
+
+    Response::from_string(svg)
+        .with_header(header_content_type)
+        .with_header(header_cache_control)
+}
+
 fn respond_error<R: Into<String>>(server_prefix: &str, reason: R) -> Response {
     let page = html! {
         (view_html_head(server_prefix, "Predict-o-matic Error"))
@@ -132,7 +145,7 @@ fn view_html_head(server_prefix: &str, page_title: &str) -> Markup {
             link rel="preconnect" href="https://fonts.googleapis.com";
             link rel="preconnect" href="https://fonts.gstatic.com" crossorigin;
             link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet";
-            link rel="icon" href={(server_prefix) "/favicon.svg"} sizes="any" type="image/svg+xml";
+            link rel="icon" href={(server_prefix) "/icon.svg"} sizes="any" type="image/svg+xml";
             meta name="viewport" content="width=device-width, initial-scale=1";
             title { (page_title) }
             style { (get_stylesheet()) }
@@ -186,9 +199,10 @@ pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> db:
     match path {
         [] | [""] => index::handle_index(tx, ctx),
         ["assets"] => assets::handle_assets_overview(tx, ctx),
+        ["icon.svg"] => Ok(respond_svg(get_favicon())),
+        ["help"] => help::handle_help(ctx),
         ["leaderboard"] => leaderboard::handle_leaderboard(tx, ctx),
         ["market", market_slug] => market::handle_market(tx, ctx, market_slug),
-        ["help"] => help::handle_help(ctx),
         _ => ctx.not_found("Not found."),
     }
 }
