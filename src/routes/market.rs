@@ -389,7 +389,7 @@ pub fn handle_deposit(
         )));
     }
 
-    model::create_deposit(tx, &market, amount, &ctx.user_email)?;
+    model::create_deposit(tx, &market, amount, ctx.user_email)?;
 
     Ok(redirect_see_other(ctx.market_url(&market, "")))
 }
@@ -493,7 +493,7 @@ pub fn handle_trade(
         "Trading in market {}: {:?}:{amount_in} -> {:?}:{amount_out}",
         market.slug, asset_in, asset_out
     );
-    model::create_trade(tx, &market, amount_in, amount_out, &ctx.user_email)?;
+    model::create_trade(tx, &market, amount_in, amount_out, ctx.user_email)?;
 
     Ok(redirect_see_other(ctx.market_url(&market, "")))
 }

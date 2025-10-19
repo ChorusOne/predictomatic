@@ -42,7 +42,7 @@ impl<'a> Context<'a> {
         user_email: &'a str,
         tx: &mut db::Transaction,
     ) -> db::Result<Context<'a>> {
-        let user_points_account = model::ensure_points_account(tx, config_app, &user_email)?;
+        let user_points_account = model::ensure_points_account(tx, config_app, user_email)?;
         let user_points = model::get_account_balance(tx, user_points_account)?;
         let ctx = Context {
             config: config_app,

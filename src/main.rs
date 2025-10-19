@@ -47,9 +47,7 @@ fn load_config() -> Config {
     }
 }
 
-fn connect_database<'conn>(
-    raw_connection: &'conn sqlite::Connection,
-) -> db::Result<db::Connection<'conn>> {
+fn connect_database(raw_connection: &sqlite::Connection) -> db::Result<db::Connection> {
     // Change the database to WAL mode if it wasn't already. Set the busy
     // timeout to 30 milliseconds, so readers and writers can wait for each
     // other a little bit.
