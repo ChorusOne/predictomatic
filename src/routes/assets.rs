@@ -108,7 +108,9 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
                         }
                     }
                 }
-                (index::view_main_aside(ctx))
+                aside .rule {
+                    (index::view_main_aside(ctx))
+                }
             }
         }
     }

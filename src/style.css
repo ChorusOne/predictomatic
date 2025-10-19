@@ -36,7 +36,7 @@ a {
 
 nav, .main, .main-error {
     min-width: 35em;
-    max-width: 54em;
+    max-width: 52em;
     margin-left: auto;
     margin-right: auto;
     padding-left: 2rem;
@@ -114,8 +114,15 @@ aside {
 .main.wider aside {
     margin-left: 2rem;
     padding-left: 2rem;
-    /* Hmm, not sure about this rule, but without it, having that navigation
-     * next to e.g. the assets table makes it look like it's part of the table. */
+    /* Match the width of the .rule border so that the elements remain in the
+     * same place with or without the rule. */
+    border-left: 1.5pt solid transparent;
+}
+
+.main.wider aside.rule {
+    /* When the main content contains a table, it makes it look like the sidebar
+     * is part of it, so we add a rule on the left to set them apart. I don't
+     * really like this solution, but it'll do for now. */
     border-left: 1.5pt solid var(--fg);
 }
 

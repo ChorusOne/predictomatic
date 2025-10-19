@@ -47,24 +47,22 @@ fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
 pub fn view_main_aside(ctx: &Context) -> Markup {
     let url = |suffix| format!("{}{}", ctx.prefix, suffix);
     html! {
-        aside {
-            h3 { "Account" }
+        h3 { "Account" }
+        p {
+            a href=(url("/assets")) { "Assets" } br;
+            a href=(url("/ledger")) { "Ledger" } br;
+            a href=(url("/ranking")) { "Ranking" }
+        }
+        h3 { "Help" }
+        p {
+            a href=(url("/help")) { "User guide" } br;
+            a href="https://github.com/ChorusOne/predictomatic" { "Source code" }
+        }
+        @if ctx.is_admin {
+            h3 { "Administration" }
             p {
-                a href=(url("/assets")) { "Assets" } br;
-                a href=(url("/ledger")) { "Ledger" } br;
-                a href=(url("/ranking")) { "Ranking" }
-            }
-            h3 { "Help" }
-            p {
-                a href=(url("/help")) { "User guide" } br;
-                a href="https://github.com/ChorusOne/predictomatic" { "Source code" }
-            }
-            @if ctx.is_admin {
-                h3 { "Administration" }
-                p {
-                    a href=(url("/create")) { "Create market" } br;
-                    a href=(url("/bonus")) { "Distribute bonus" } br;
-                }
+                a href=(url("/create")) { "Create market" } br;
+                a href=(url("/bonus")) { "Distribute bonus" } br;
             }
         }
     }
@@ -85,7 +83,9 @@ fn view_index(ctx: &Context, markets: &[Market]) -> Markup {
                         (view_market_summary(ctx, market))
                     }
                 }
-                (view_main_aside(ctx))
+                aside {
+                    (view_main_aside(ctx))
+                }
             }
         }
     }
