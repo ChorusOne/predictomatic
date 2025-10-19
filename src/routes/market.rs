@@ -172,19 +172,21 @@ fn view_prediction_binary(
             div #trade-offer {
                 h3 { "Trade offer" }
                 // The JS replaces the contents of the table when dragging the slider.
-                table {
-                    tr {
-                        td {
-                            "Move the slider to receive a trade offer."
+                div {
+                    table {
+                        tr {
+                            td {
+                                "Move the slider to receive a trade offer."
+                            }
                         }
                     }
-                }
-                form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
-                    input type="hidden" name="amount_in" value="0";
-                    input type="hidden" name="min_out" value="0";
-                    input type="hidden" name="asset_in" value="0";
-                    input type="hidden" name="asset_out" value="0";
-                    button #trade-submit type="submit" disabled { "Trade" }
+                    form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
+                        input type="hidden" name="amount_in" value="0";
+                        input type="hidden" name="min_out" value="0";
+                        input type="hidden" name="asset_in" value="0";
+                        input type="hidden" name="asset_out" value="0";
+                        button #trade-submit type="submit" disabled { "Trade" }
+                    }
                 }
             }
         } @else {

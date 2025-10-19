@@ -77,13 +77,13 @@ nav span {
 
 .main {
     display: grid;
-    grid-template-columns: 5fr 2fr;
+    grid-template-columns: 5fr 2.3fr;
     grid-template-areas: 'main aside';
     margin-bottom: 3rem;
 }
 
 .main.index {
-    grid-template-columns: 4fr 1fr;
+    grid-template-columns: 5fr 1.5fr;
 }
 
 section {
@@ -107,7 +107,7 @@ section h2 {
 
 aside {
     grid-area: aside;
-    margin-left: 2rem;
+    margin-left: 2.5rem;
 }
 
 h3 {
@@ -186,36 +186,31 @@ input:disabled, button:disabled, .slider .knob.disabled {
     color: color-mix(in srgb, var(--fg) 60%, var(--dp));
 }
 
-form, label {
+aside form, aside label {
     display: grid;
     grid-template-columns: 1fr 5rem;
 }
 
-form label {
+aside form label {
     grid-column: 1 / 3;
     line-height: 2.2rem;
     height: 2.2rem;
 }
 
-form button {
-    margin-top: 0.2rem;
+aside form button {
+    margin-top: 0.5rem;
     grid-column: 2 / 3;
 }
 
-form button.wide {
+aside form button.wide {
     grid-column: 1 / 3;
 }
 
-form label input {
+aside form label input {
     grid-column: 2 / 3;
     font-size: 0.9rem;
     line-height: 1rem;
     text-align: right;
-}
-
-section form {
-    margin-top: 1rem;
-    grid-template-columns: 1fr 5rem 1fr;
 }
 
 .slider {
@@ -285,6 +280,15 @@ section form {
     margin-top: 1rem;
 }
 
+#trade-offer div {
+    display: grid;
+    grid-template-columns: auto 1fr 4rem;
+    grid-template-areas: 'table _1 form';
+}
+
+#trade-offer form { grid-area: form; }
+#trade-offer table { grid-area: table; }
+
 #trade-offer td.amount, #trade-offer td.outcome-label {
     padding-left: 1ex;
 }
@@ -304,6 +308,11 @@ section form {
 
 #trade-offer td.strong, #trade-offer strong {
     font-weight: 700;
+}
+
+#trade-offer button {
+    width: 100%;
+    height: 100%;
 }
 
 /* In participant tables, mark the current user with an arrow and a slightly
