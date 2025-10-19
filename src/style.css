@@ -324,7 +324,7 @@ tr.self td.owner:before {
 
 tr.system td.owner {
     font-style: italic;
-    letter-spacing: 1pt;
+    text-transform: lowercase;
 }
 
 /* TODO: Do I end up using this? It works well for an anchor with content "?" */
