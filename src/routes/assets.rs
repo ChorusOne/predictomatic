@@ -157,6 +157,10 @@ pub fn handle_assets_overview(tx: &mut db::Transaction, ctx: &Context) -> db::Re
         let mut total_value = AssetId::POINTS.zero();
 
         for ((oc, b), p) in market.outcomes.iter().zip(&balance.outcomes).zip(dist.ps()) {
+            // If the user does not own this asset, we don't need to list it.
+            if b.0 == 0 {
+                continue;
+            }
             let value = b.value_at(p);
             let asset = UserAsset {
                 label: &oc.value,
