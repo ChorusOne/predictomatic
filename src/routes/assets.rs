@@ -71,11 +71,12 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
     let net_worth = total_illiquid + ctx.user_points;
 
     html! {
-        (view_html_head("Predict-o-matic"))
+        (view_html_head("Assets — Predict-o-matic"))
         body {
             (view_header(ctx))
             div .main .wider {
                 section {
+                    h1 { "Assets" }
                     p {
                         "Your portfolio consists of points (symbol ‘$’) "
                         "and outcome shares. "
@@ -119,7 +120,7 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
                         }
                     }
                 }
-                aside .rule {
+                aside {
                     (index::view_main_aside(ctx))
                 }
             }
@@ -197,17 +198,18 @@ struct UserNetWorth {
 
 fn view_net_worth_list(ctx: &Context, users_net_worth: &[(String, UserNetWorth)]) -> Markup {
     html! {
-        (view_html_head("Predict-o-matic"))
+        (view_html_head("Leaderboard — Predict-o-matic"))
         body {
             (view_header(ctx))
             div .main .wider {
                 section {
+                    h1 { "Leaderboard" }
                     p {
                         "A prediction market is a zero-sum game. "
                         "Money flows from those who make bad predictions "
                         "to those who make good predictions. "
                         "Therefore, net worth is some indicator "
-                        "for who is making good predictions."
+                        "of who is making good predictions."
                     }
                     table {
                         tr {
@@ -232,7 +234,7 @@ fn view_net_worth_list(ctx: &Context, users_net_worth: &[(String, UserNetWorth)]
                         }
                     }
                 }
-                aside .rule {
+                aside {
                     (index::view_main_aside(ctx))
                 }
             }

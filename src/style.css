@@ -88,18 +88,25 @@ section {
 }
 
 section h1 {
-    margin-bottom: 1rem;
+    margin-bottom: 0.8rem;
     font-size: 2.5em;
     line-height: 2.6rem;
     font-weight: 600;
 }
 
-section h2 {
+h2 {
     margin-top: 2.4rem;
     margin-bottom: 0.5rem;
     font-size: 1.4rem;
     line-height: 1.7rem;
     font-weight: 800;
+}
+
+h2:first-child {
+    /* Skip the top margin and then move it up by 0.5rem, so the text aligns
+     * with the sidebar. */
+    margin-top: -0.3rem;
+    margin-bottom: 0.3rem;
 }
 
 aside {
@@ -112,18 +119,9 @@ aside {
 }
 
 .main.wider aside {
-    margin-left: 2.8rem;
-    padding-left: 2.8rem;
-    /* Match the width of the .rule border so that the elements remain in the
-     * same place with or without the rule. */
-    border-left: 1.5pt solid transparent;
-}
-
-.main.wider aside.rule {
-    /* When the main content contains a table, it makes it look like the sidebar
-     * is part of it, so we add a rule on the left to set them apart. I don't
-     * really like this solution, but it'll do for now. */
-    border-left: 1.5pt solid var(--fg);
+    margin-left: 2rem;
+    padding-left: 2rem;
+    padding-right: 1rem;
 }
 
 h3 {
