@@ -182,7 +182,9 @@ impl fmt::Display for Amount {
         // maybe makes sense. So only render the minus if the rounded number is
         // nonzero.
         let sign = if amount < 0 && (integral > 0 || fractional_trunc > 0) {
-            "-"
+            // The normal dash is a tad too narrow. There is U+2212 MINUS SIGN
+            // but that one is too wide for my taste. Use an en-dash then.
+            "\u{2013}"
         } else {
             ""
         };
@@ -662,14 +664,14 @@ mod test {
         assert_eq!(format!("{x:.1}"), "123.0");
 
         let x = Amount(-123_456_789, AssetId::POINTS);
-        assert_eq!(format!("{x}"), "-123.456789");
-        assert_eq!(format!("{x:.3}"), "-123.457");
-        assert_eq!(format!("{x:.1}"), "-123.5");
+        assert_eq!(format!("{x}"), "–123.456789");
+        assert_eq!(format!("{x:.3}"), "–123.457");
+        assert_eq!(format!("{x:.1}"), "–123.5");
 
         let x = Amount(-123_000_789, AssetId::POINTS);
-        assert_eq!(format!("{x}"), "-123.000789");
-        assert_eq!(format!("{x:.3}"), "-123.001");
-        assert_eq!(format!("{x:.1}"), "-123.0");
+        assert_eq!(format!("{x}"), "–123.000789");
+        assert_eq!(format!("{x:.3}"), "–123.001");
+        assert_eq!(format!("{x:.1}"), "–123.0");
 
         let x = Amount(1_999_999, AssetId::POINTS);
         assert_eq!(format!("{x}"), "1.999999");
@@ -677,14 +679,14 @@ mod test {
 
         // This is a regression test
         let x = Amount(-50_000, AssetId::POINTS);
-        assert_eq!(format!("{x}"), "-0.050000");
-        assert_eq!(format!("{x:.1}"), "-0.1");
+        assert_eq!(format!("{x}"), "–0.050000");
+        assert_eq!(format!("{x:.1}"), "–0.1");
 
         // Rounding a small negative number towards zero should not include the
         // minus sign.
         let x = Amount(-123, AssetId::POINTS);
-        assert_eq!(format!("{x}"), "-0.000123");
-        assert_eq!(format!("{x:.4}"), "-0.0001");
+        assert_eq!(format!("{x}"), "–0.000123");
+        assert_eq!(format!("{x:.4}"), "–0.0001");
         assert_eq!(format!("{x:.3}"), "0.000");
 
         let x = Amount(0, AssetId::POINTS);
