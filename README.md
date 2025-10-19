@@ -66,6 +66,8 @@ git ls-files | entr -r cargo run -- predictomatic.toml
  * [ ] Markets with continuous outcomes (e.g. predicting on a date).
  * [ ] Pay active users a stipend, e.g. every 7 days pay X to users who traded
        in the past 7 days.
+ * [ ] In the participants table, add a yield column (UPnL / Deposit), possibly
+       with a sideways bar chart.
 
 ## License
 
