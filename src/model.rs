@@ -189,7 +189,11 @@ impl fmt::Display for Amount {
             ""
         };
 
-        write!(f, "{sign}{integral}.{fractional_trunc:>0p$}", p = precision)
+        if precision > 0 {
+            write!(f, "{sign}{integral}.{fractional_trunc:>0p$}", p = precision)
+        } else {
+            write!(f, "{sign}{integral}")
+        }
     }
 }
 
@@ -688,11 +692,13 @@ mod test {
         let x = Amount(1_999_999, AssetId::POINTS);
         assert_eq!(format!("{x}"), "1.999999");
         assert_eq!(format!("{x:.2}"), "2.00");
+        assert_eq!(format!("{x:.0}"), "2");
 
         // This is a regression test
         let x = Amount(-50_000, AssetId::POINTS);
         assert_eq!(format!("{x}"), "–0.050000");
         assert_eq!(format!("{x:.1}"), "–0.1");
+        assert_eq!(format!("{x:.0}"), "0");
 
         // Rounding a small negative number towards zero should not include the
         // minus sign.
@@ -700,10 +706,12 @@ mod test {
         assert_eq!(format!("{x}"), "–0.000123");
         assert_eq!(format!("{x:.4}"), "–0.0001");
         assert_eq!(format!("{x:.3}"), "0.000");
+        assert_eq!(format!("{x:.0}"), "0");
 
         let x = Amount(0, AssetId::POINTS);
         assert_eq!(format!("{x}"), "0.000000");
         assert_eq!(format!("{x:.1}"), "0.0");
+        assert_eq!(format!("{x:.0}"), "0");
     }
 
     #[test]
