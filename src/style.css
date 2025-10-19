@@ -131,9 +131,18 @@ h3:first-child {
     margin-bottom: 1rem;
 }
 
-/* TODO: Make even the table in the content area 100% width? It looks better ... */
-aside table {
+table {
     width: 100%;
+    /* Disable horizontal border-spacing, because it breaks alignment of full-
+     * width tables, it's as if they had a little padding. The space between
+     * rows though, that little breathing room is nice to have so we keep it. */
+    border-spacing: 0pt 2pt;
+
+}
+
+table td {
+    /* In case of line-wrapping content, align the other lines to the top. */
+    vertical-align: top;
 }
 
 section table td + td, section table th + th {
@@ -308,7 +317,7 @@ aside form label input {
     padding-right: 0.1em;
 }
 
-#trade-offer td.strong, #trade-offer strong {
+td.strong, strong {
     font-weight: 700;
 }
 
@@ -383,20 +392,20 @@ tr.system td.owner {
     grid-area: stats;
 }
 
-table.wide {
-    width: 100%;
-}
-
 table .w5 {
     width: 5rem;
 }
 
-table tr.market-assets {
+table tr.market-assets td {
     font-weight: 600;
     vertical-align: bottom;
 }
 
 table tr.market-assets a {
     display: block;
+    margin-top: 1.6rem;
+}
+
+table + p {
     margin-top: 1.6rem;
 }

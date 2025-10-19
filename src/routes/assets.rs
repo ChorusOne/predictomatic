@@ -61,6 +61,12 @@ fn view_market_assets(ctx: &Context, market: &MarketAssets) -> Markup {
 }
 
 fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
+    let mut total_illiquid = AssetId::POINTS.zero();
+    for market in markets {
+        total_illiquid = total_illiquid + market.total_value;
+    }
+    let net_worth = total_illiquid + ctx.user_points;
+
     html! {
         (view_html_head("Predict-o-matic"))
         body {
@@ -82,16 +88,22 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
                             td .num { "1.00" }
                             td .num { (format!("{:.2}", ctx.user_points)) }
                         }
+                        tr {
+                            td colspan="3" { "Illiquid outcome shares" }
+                            td .num { (format!("{:.2}", total_illiquid)) }
+                        }
+                        tr {
+                            td colspan="3" { "Total" }
+                            td .num .strong { (format!("{:.2}", net_worth)) }
+                        }
                         @for market in markets {
                             (view_market_assets(ctx, market))
                         }
-                        @if markets.is_empty() {
-                            tr {
-                                td colspan="4" {
-                                    "You don’t own any outcome shares. "
-                                    "Go bet in some markets!"
-                                }
-                            }
+                    }
+                    @if markets.is_empty() {
+                        p {
+                            "You don’t own any outcome shares. "
+                            "Go bet in some markets!"
                         }
                     }
                 }
