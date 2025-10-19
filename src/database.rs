@@ -661,6 +661,44 @@ pub fn get_market_accounts<'i, 't, 'a>(
     Ok(result)
 }
 
+#[derive(Debug)]
+pub struct PointsAccount {
+    pub owner: String,
+    pub balance: i64,
+}
+
+/// Return balances of all global (not associated with a market) points accounts.
+pub fn get_points_accounts<'i, 't, 'a>(
+    tx: &'i mut Transaction<'t, 'a>,
+) -> Result<Iter<'i, 'a, PointsAccount>> {
+    let sql = r#"
+        select
+            owner
+          , balance
+        from
+          accounts
+        where
+          -- Market id 0 means no market, asset id 0 is the points asset.
+          (market_id = 0) and (asset_id = 0);
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    let decode_row = |statement: &Statement| {
+        Ok(PointsAccount {
+            owner: statement.read(0)?,
+            balance: statement.read(1)?,
+        })
+    };
+    let result = Iter {
+        statement,
+        decode_row,
+    };
+    Ok(result)
+}
+
 pub fn create_realized_profit(
     tx: &mut Transaction,
     market_id: i64,

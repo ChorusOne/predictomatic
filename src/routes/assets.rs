@@ -195,16 +195,6 @@ struct UserNetWorth {
     total: Amount,
 }
 
-impl UserNetWorth {
-    fn new() -> Self {
-        Self {
-            liquid: AssetId::POINTS.zero(),
-            illiquid: AssetId::POINTS.zero(),
-            total: AssetId::POINTS.zero(),
-        }
-    }
-}
-
 fn view_net_worth_list(ctx: &Context, users_net_worth: &[(String, UserNetWorth)]) -> Markup {
     html! {
         (view_html_head("Predict-o-matic"))
@@ -228,8 +218,10 @@ fn view_net_worth_list(ctx: &Context, users_net_worth: &[(String, UserNetWorth)]
                             th .num .w5 { "Net" br; "Worth ($)" }
                         }
                         @for (i, (owner, net_worth)) in users_net_worth.iter().enumerate() {
-                            tr .self[owner == ctx.user_email] {
-                                // TODO: View self.
+                            tr
+                                .self[owner == ctx.user_email]
+                                .system[owner == "SYSTEM"]
+                            {
                                 @let rank = i + 1;
                                 td { (rank) }
                                 td .owner { (ctx.view_email(owner)) }
@@ -261,6 +253,25 @@ pub fn handle_leaderboard(tx: &mut db::Transaction, ctx: &Context) -> db::Result
     // We are going to map owners (emails) to their net worth.
     let mut users: HashMap<String, UserNetWorth> = HashMap::new();
 
+    for res_account in db::get_points_accounts(tx)? {
+        let account = res_account?;
+        users.insert(
+            account.owner,
+            UserNetWorth {
+                liquid: Amount(account.balance, AssetId::POINTS),
+                illiquid: AssetId::POINTS.zero(),
+                total: AssetId::POINTS.zero(),
+            },
+        );
+    }
+
+    // TODO: The system's points account is also where all sign-on bonuses get
+    // paid from, so it goes very very negative. On the one hand, that's nice,
+    // because the sum of the net worths is always 0. On the other hand, it says
+    // little about the market maker performance and more about the number of
+    // users who joined. We might instead count the system's liquid assets as
+    // those locked up in markets.
+
     for market in markets.into_iter() {
         // For illiquid assets, only the open markets are relevant.
         if !market.is_open() {
@@ -271,7 +282,9 @@ pub fn handle_leaderboard(tx: &mut db::Transaction, ctx: &Context) -> db::Result
         let ps = dist.ps();
 
         for (owner, balance) in market.balances.into_iter() {
-            let net_worth = users.entry(owner).or_insert_with(UserNetWorth::new);
+            let net_worth = users
+                .get_mut(&owner)
+                .expect("Users who traded have a points account, so they are in the map already.");
             for (b, p) in balance.outcomes.iter().zip(&ps) {
                 net_worth.illiquid = net_worth.illiquid + b.value_at(*p);
             }

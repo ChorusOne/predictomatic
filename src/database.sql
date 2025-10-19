@@ -226,6 +226,17 @@ from
 where
   market_id = :market_id;
 
+-- Return balances of all global (not associated with a market) points accounts.
+-- @query get_points_accounts() ->* PointsAccount
+select
+    owner    -- :str
+  , balance  -- :i64
+from
+  accounts
+where
+  -- Market id 0 means no market, asset id 0 is the points asset.
+  (market_id = 0) and (asset_id = 0);
+
 -- @query create_realized_profit(
 --   market_id: i64,
 --   event_id: i64,
