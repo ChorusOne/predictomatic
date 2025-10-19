@@ -138,10 +138,19 @@ fn view_resolution(market: &Market) -> Markup {
     }
 }
 
-fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup {
+fn view_prediction_binary(
+    ctx: &Context,
+    market: &Market,
+    ps: &[f64],
+    user_position: Option<&MarketPosition>,
+) -> Markup {
     // The convention is that the first outcome is the positive one.
     let p = ps[0];
     let percentage = format!("{:.1}%", p * 100.0);
+    let label0 = &market.outcomes[0].value;
+    let label1 = &market.outcomes[1].value;
+    let price0 = format!("$\u{200a}{:.2}", ps[0]);
+    let price1 = format!("$\u{200a}{:.2}", ps[1]);
 
     html! {
         div #trade-widget .slider {
@@ -152,18 +161,30 @@ fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup 
             span .percentage .puser { (percentage) }
             span .knob .disabled {}
         }
-        div #trade-offer {
-            "Move the slider to receive a trade offer."
-        }
-        form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
-            input type="hidden" name="amount_in" value="0";
-            input type="hidden" name="min_out" value="0";
-            input type="hidden" name="asset_in" value="0";
-            input type="hidden" name="asset_out" value="0";
-            button #trade-submit type="submit" disabled { "Trade" }
-        }
-        noscript {
-            "You need to enable Javascript to trade."
+        noscript { "You need to enable Javascript to trade." }
+        @if user_position.is_some() {
+            div #trade-offer {
+                h3 { "Trade offer" }
+                // The JS replaces the contents of the table when dragging the slider.
+                table {
+                    tr {
+                        td {
+                            "Move the slider to receive a trade offer."
+                        }
+                    }
+                }
+                form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
+                    input type="hidden" name="amount_in" value="0";
+                    input type="hidden" name="min_out" value="0";
+                    input type="hidden" name="asset_in" value="0";
+                    input type="hidden" name="asset_out" value="0";
+                    button #trade-submit type="submit" disabled { "Trade" }
+                }
+            }
+        } @else {
+            p {
+                "To start trading, deposit some funds on the right."
+            }
         }
     }
 }
@@ -265,7 +286,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                 section {
                     h1 { (market.title) }
                     @match market.is_open() {
-                        true => (view_prediction_binary(ctx, market, &ps)),
+                        true => (view_prediction_binary(ctx, market, &ps, our_position)),
                         false => (view_resolution(market)),
                     }
                     h2 { "Resolution criteria" }

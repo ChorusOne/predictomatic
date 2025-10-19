@@ -38,73 +38,86 @@ function getTrade(p) {
 
     // The deltas are the delas in the *pool balance*, not the deltas in the
     // user's balance, but the trade is from the point of view of the user.
-    if (d0 > 0.005) {
+    if (d0 > 0.01) {
         trade = {
             assetBuy: 1,
             assetSell: 0,
             amountBuy: -d1,
             amountSell: d0,
+            valid: true,
         };
-    } else if (d1 > 0.005) {
+    } else if (d1 > 0.01) {
         trade = {
             assetBuy: 0,
             assetSell: 1,
             amountBuy: -d0,
             amountSell: d1,
+            valid: true,
+        };
+    } else {
+        // If the slider goes past the current market state, there is nothing to
+        // buy or sell, so we don't have a trade offer. But if we would hide the
+        // table, that's visually very jarring, so instead we pretend to buy 0.0
+        // of asset 0.
+        trade = {
+            assetBuy: 0,
+            assetSell: 1,
+            amountBuy: 0.0,
+            amountSell: 0.0,
+            valid: false,
         };
     }
 
     const offerElem = document.getElementById("trade-offer");
+    const offerTable = offerElem.getElementsByTagName("table")[0];
 
-    if (trade !== null) {
-        const amountBuy = trade.amountBuy;
-        const amountSell = trade.amountSell;
-        const labelBuy = assetLabels[trade.assetBuy];
-        const labelSell = assetLabels[trade.assetSell];
-        const ratio = trade.amountBuy / trade.amountSell;
-        const costPoints = (1.0 / (ratio + 1.0));
+    const amountBuy = trade.amountBuy;
+    const amountSell = trade.amountSell;
+    const labelBuy = assetLabels[trade.assetBuy];
+    const labelSell = assetLabels[trade.assetSell];
+    const ratio = trade.amountBuy / trade.amountSell;
 
-        // Usually it's sufficient to quote the price in cents, you're not going
-        // to care about the difference between a 67% and 68% probability. But
-        // at the extreme prices, it may start to matter, so add a decimal there.
-        const costPrecision = costPoints > 0.90 || costPoints < 0.10 ? 3 : 2;
+    // We can compute the average cost from the ratio: the sum of the prices
+    // is 1, so solving yields price = 1 / (ratio + 1). In other words, the
+    // ratio of the prices is the odds, and we convert the odds back to a
+    // probability. However, when both amounts are 0, the ratio does not exist.
+    // That case happens when the slider is at the market probability, so then
+    // we still have a price: the current market price.
+    const costPoints = trade.valid ? (1.0 / (ratio + 1.0)) : p;
 
-        offerElem.innerHTML = `
-        <h3>Trade offer</h3>
-        <table>
-            <tr>
-                <td>You receive</td>
-                <td class="num amount strong">${amountBuy.toFixed(2)}</td>
-                <td class="outcome-label strong">${labelBuy}</td>
-                <td class="at">at</td>
-                <td class="num price"><strong>$\u{200a}${costPoints.toFixed(costPrecision)}</strong> per share</td>
-            </tr>
-            <tr>
-                <td>You pay</td>
-                <td class="num amount">${amountSell.toFixed(2)}</td>
-                <td class="outcome-label">${labelSell}</td>
-                <td class="at">at</td>
-                <td class="num price">$\u{200a}${(1.0 - costPoints).toFixed(costPrecision)} per share</td>
-            </tr>
-        </table>
-        `;
+    // Usually it's sufficient to quote the price in cents, you're not going
+    // to care about the difference between a 67% and 68% probability. But
+    // at the extreme prices, it may start to matter, so add a decimal there.
+    const costPrecision = costPoints > 0.90 || costPoints < 0.10 ? 3 : 2;
 
+    offerTable.innerHTML = `
+    <tr>
+        <td>You receive</td>
+        <td class="num amount strong">${amountBuy.toFixed(2)}</td>
+        <td class="outcome-label strong">${labelBuy}</td>
+        <td class="at">at</td>
+        <td class="num price"><strong>$\u{200a}${costPoints.toFixed(costPrecision)}</strong> per share</td>
+    </tr>
+    <tr>
+        <td>You pay</td>
+        <td class="num amount">${amountSell.toFixed(2)}</td>
+        <td class="outcome-label">${labelSell}</td>
+        <td class="at">at</td>
+        <td class="num price">$\u{200a}${(1.0 - costPoints).toFixed(costPrecision)} per share</td>
+    </tr>
+    `;
+
+    if (trade.valid) {
         document.trade_form.asset_in.value = assetIds[trade.assetSell];
         document.trade_form.asset_out.value = assetIds[trade.assetBuy];
         document.trade_form.amount_in.value = trade.amountSell.toFixed(2);
         // Build in 2% slippage tolerance.
         // TODO: Let the user pick.
         document.trade_form.min_out.value = (trade.amountBuy * 0.98).toFixed(6);
-    } else if (canTrade) {
-        // TODO: This makes the page flicker when you slide past the zero point,
-        // maybe it's better to at least display the regular trade offer table?
-        offerElem.innerText = "Move the slider to receive a trade offer.";
-    } else {
-        offerElem.innerText = "To participate in this market, first deposit some funds on the right.";
     }
 
     const submitButton = document.getElementById("trade-submit");
-    submitButton.disabled = trade === null;
+    submitButton.disabled = !trade.valid;
 }
 
 function initializeSlider() {
@@ -140,7 +153,6 @@ function initializeSlider() {
     const positionSlider = (p) => {
         setPos(knob, p);
         setPercentage(tUser, pUser, p);
-        getTrade(p);
     };
     const onDragMove = (event) => {
         const dx = event.clientX - startX;
@@ -151,6 +163,7 @@ function initializeSlider() {
         const max = Math.min(pMax, 0.999);
         const p = Math.max(min, Math.min(max, rx));
         positionSlider(p);
+        getTrade(p);
     };
     const onDragEnd = (event) => {
         document.removeEventListener("mouseup", onDragEnd);
@@ -170,8 +183,10 @@ function initializeSlider() {
         document.addEventListener("touchmove", onDragMove);
     };
 
-    knob.addEventListener("mousedown", onDragStart);
-    knob.addEventListener("touchstart", onDragStart);
+    if (canTrade) {
+        knob.addEventListener("mousedown", onDragStart);
+        knob.addEventListener("touchstart", onDragStart);
+    }
 
     const p = getProbability(systemBalance);
     setPercentage(tMarket, pMarket, p);

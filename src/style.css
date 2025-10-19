@@ -302,8 +302,8 @@ section form {
     padding-right: 0.1em;
 }
 
-#trade-offer td.strong {
-    font-weight: 600;
+#trade-offer td.strong, #trade-offer strong {
+    font-weight: 700;
 }
 
 .market + .market, p + .market {
