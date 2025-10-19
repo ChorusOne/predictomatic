@@ -389,9 +389,21 @@ impl Market {
     /// Return the amount of points deposited into this market.
     pub fn total_deposited(&self) -> Amount {
         let mut sum = AssetId::POINTS.zero();
-        for b in self.balances.values() {
-            sum = sum + b.points;
+
+        if !self.profits.is_empty() {
+            // If the market is already resolved, then the liquidity is 0,
+            // because all the points moved out of the market accounts. We would
+            // still like to show the liquidity at the time it resolved, which
+            // we have from the realized profits.
+            for rp in &self.profits {
+                sum = sum + rp.amount_in;
+            }
+        } else {
+            for b in self.balances.values() {
+                sum = sum + b.points;
+            }
         }
+
         sum
     }
 
