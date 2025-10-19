@@ -153,10 +153,6 @@ fn view_prediction_binary(
     // The convention is that the first outcome is the positive one.
     let p = ps[0];
     let percentage = format!("{:.1}%", p * 100.0);
-    let label0 = &market.outcomes[0].value;
-    let label1 = &market.outcomes[1].value;
-    let price0 = format!("$\u{200a}{:.2}", ps[0]);
-    let price1 = format!("$\u{200a}{:.2}", ps[1]);
 
     html! {
         div #trade-widget .slider {
