@@ -159,6 +159,12 @@ table td {
     vertical-align: top;
 }
 
+table th {
+    /* Though with headings, it's the other way around, glue them closer to the
+     * table. */
+    vertical-align: bottom;
+}
+
 section table td + td, section table th + th {
     padding-left: 2rem;
 }
@@ -404,9 +410,8 @@ tr.system td.owner {
     grid-area: stats;
 }
 
-table .w5 {
-    width: 5rem;
-}
+table .w2 { width: 2rem; }
+table .w5 { width: 5rem; }
 
 table tr.market-assets td {
     font-weight: 600;

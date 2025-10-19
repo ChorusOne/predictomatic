@@ -172,6 +172,7 @@ pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> db:
     match path {
         [] | [""] => index::handle_index(tx, ctx),
         ["assets"] => assets::handle_assets_overview(tx, ctx),
+        ["leaderboard"] => assets::handle_leaderboard(tx, ctx),
         ["market", market_slug] => market::handle_market(tx, ctx, market_slug),
         ["help"] => help::handle_help(ctx),
         _ => Ok(not_found("Not found.")),
