@@ -76,6 +76,15 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
             (view_header(ctx))
             div .main .wider {
                 section {
+                    p {
+                        "Your portfolio consists of points (symbol ‘$’) "
+                        "and outcome shares. "
+                        "Points are " em { "liquid" } ": you can deposit them into markets. "
+                        "Outcome shares are " em { "illiquid" }
+                        ": while you can trade them in the market, "
+                        "the value remains locked in the market until it resolves. "
+                        "The outcome shares are valued at their current market price."
+                    }
                     // TODO: Would be nice to render a pie chart with top assets
                     // here.
                     table {
