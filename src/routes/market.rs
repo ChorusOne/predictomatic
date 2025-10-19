@@ -97,8 +97,11 @@ fn view_market_participants_open(ctx: &Context, positions: &[MarketPosition]) ->
                 th .num { "UPnL ($)" }
             }
             @for position in positions {
-                tr {
-                    td { (ctx.view_email(position.owner)) }
+                tr
+                    .self[position.owner == ctx.user_email]
+                    .system[position.owner == "SYSTEM"]
+                {
+                    td .owner { (ctx.view_email(position.owner)) }
                     td .num { (format!("{:.2}", position.balance.points)) }
                     td .num { (format!("{:.2}", position.market_value)) }
                     td .num { (format!("{:.2}", position.unrealized_pnl)) }
@@ -118,8 +121,11 @@ fn view_market_participants_profits(ctx: &Context, positions: &[RealizedProfit])
                 th .num { "Profit ($)" }
             }
             @for position in positions {
-                tr {
-                    td { (ctx.view_email(&position.owner)) }
+                tr
+                    .self[position.owner == ctx.user_email]
+                    .system[position.owner == "SYSTEM"]
+                {
+                    td .owner { (ctx.view_email(&position.owner)) }
                     td .num { (format!("{:.2}", position.amount_in)) }
                     td .num { (format!("{:.2}", position.amount_out)) }
                     td .num { (format!("{:.2}", position.amount_out - position.amount_in)) }

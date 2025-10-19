@@ -306,6 +306,27 @@ section form {
     font-weight: 700;
 }
 
+/* In participant tables, mark the current user with an arrow and a slightly
+ * bolder line, so people can easily locate themselves. */
+tr.self {
+    font-weight: 525;
+    position: relative;
+}
+
+tr.self td.owner:before {
+    position: absolute;
+    left: -0.8rem;
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.6rem;
+    content: '›';
+}
+
+tr.system td.owner {
+    text-transform: lowercase;
+    font-style: italic;
+}
+
 .market + .market, p + .market {
     margin-top: 3rem;
 }
