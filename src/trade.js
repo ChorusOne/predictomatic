@@ -138,6 +138,13 @@ function initializeSlider() {
     var widgetRect = widget.getClientRects()[0];
     var knobRect = knob.getClientRects()[0];
     var hrRect = hr.getClientRects()[0];
+    var selectedProbability = getProbability(systemBalance);
+
+    const updateRects = () => {
+        widgetRect = widget.getClientRects()[0];
+        knobRect = knob.getClientRects()[0];
+        hrRect = hr.getClientRects()[0];
+    };
 
     const setPos = (elem, p) => {
         const rect = elem.getClientRects()[0];
@@ -162,8 +169,9 @@ function initializeSlider() {
         const min = Math.max(pMin, 0.001);
         const max = Math.min(pMax, 0.999);
         const p = Math.max(min, Math.min(max, rx));
-        positionSlider(p);
-        getTrade(p);
+        selectedProbability = p;
+        positionSlider(selectedProbability);
+        getTrade(selectedProbability);
     };
     const onDragEnd = (event) => {
         document.removeEventListener("mouseup", onDragEnd);
@@ -172,15 +180,20 @@ function initializeSlider() {
         document.removeEventListener("touchmove", onDragMove);
     };
     const onDragStart = (event) => {
-        widgetRect = widget.getClientRects()[0];
-        knobRect = knob.getClientRects()[0];
-        hrRect = hr.getClientRects()[0];
+        updateRects();
         startX = event.clientX;
         startY = event.clientY;
         document.addEventListener("mouseup", onDragEnd);
         document.addEventListener("touchend", onDragEnd);
         document.addEventListener("mousemove", onDragMove);
         document.addEventListener("touchmove", onDragMove);
+    };
+    const onResize = (event) => {
+        updateRects();
+        const p = getProbability(systemBalance);
+        setPercentage(tMarket, pMarket, p);
+        setPercentage(tUser, pUser, selectedProbability);
+        if (isOpen) positionSlider(selectedProbability);
     };
 
     if (canTrade) {
@@ -196,6 +209,8 @@ function initializeSlider() {
     } else {
         knob.parentElement.removeChild(knob);
     }
+
+    window.addEventListener("resize", onResize);
 }
 
 function initializeDepositForm() {
