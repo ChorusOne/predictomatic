@@ -386,3 +386,17 @@ tr.system td.owner {
 table.wide {
     width: 100%;
 }
+
+table .w5 {
+    width: 5rem;
+}
+
+table tr.market-assets {
+    font-weight: 600;
+    vertical-align: bottom;
+}
+
+table tr.market-assets a {
+    display: block;
+    margin-top: 1.6rem;
+}

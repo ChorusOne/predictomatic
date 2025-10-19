@@ -39,11 +39,22 @@ struct UserAsset<'a> {
 
 fn view_market_assets(ctx: &Context, market: &MarketAssets) -> Markup {
     html! {
-        tr {
-            td {
+        tr .market-assets {
+            td colspan="3" {
                 a href=(ctx.market_url(market.market, "")) {
                     (market.market.title)
                 }
+            }
+            td .num {
+                (format!("{:.2}", market.total_value))
+            }
+        }
+        @for asset in &market.assets {
+            tr {
+                td { (asset.label) }
+                td .num { (format!("{:.2}", asset.amount)) }
+                td .num { (format!("{:.2}", asset.price)) }
+                td .num { (format!("{:.2}", asset.value)) }
             }
         }
     }
@@ -59,9 +70,9 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
                     table .wide {
                         tr {
                             th { "Asset" }
-                            th .num { "Amount" }
-                            th .num { "Price ($)" }
-                            th .num { "Value ($)" }
+                            th .num .w5 { "Amount" }
+                            th .num .w5 { "Price ($)" }
+                            th .num .w5 { "Value ($)" }
                         }
                         tr {
                             td { "Liquid points" }
