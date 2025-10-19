@@ -41,9 +41,9 @@ There is a single toml configuration file. See `predictomatic.toml` for an
 example. See `src/config.rs` for documentation of the fields.
 
 For local testing where no reverse proxy to set the `X-Email` header is
-available, you can set `debug.unsafe_default_email` to an email address that
+available, you can set `demo_server.unsafe_user_email` to an email address that
 will be used when no `X-Email` header is present. This feature is of course
-unsafe to use in production.
+unsafe to use in production, and only available in debug builds.
 
 ## Development
 
