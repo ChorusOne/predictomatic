@@ -154,20 +154,14 @@ fn view_html_head(server_prefix: &str, page_title: &str) -> Markup {
     }
 }
 
-// In debug mode, we load the stylesheet from disk on the fly, so you can edit
-// without having to rebuild the server.
-#[cfg(debug_assertions)]
 fn get_stylesheet() -> Markup {
-    let data = std::fs::read_to_string("src/style.css")
-        .expect("Need to run from repo root in debug mode.");
-    maud::PreEscaped(data)
-}
-
-// For a release build, we embed the stylesheet into the binary.
-#[cfg(not(debug_assertions))]
-fn get_stylesheet() -> Markup {
+    // In the past, we had different functions for this in debug and release
+    // mode, where in release we embed the data in the binary, and in debug we
+    // load it from disk, so you can edit it and preview without rebuilding.
+    // But it turns out, recompiling is fast enough, you can watch files and
+    // recompile on change, so we can simplify this to just always include.
     let data = include_str!("../style.css");
-    maud::PreEscaped(data)
+    maud::PreEscaped(data.to_string())
 }
 
 fn get_favicon() -> &'static str {

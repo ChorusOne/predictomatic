@@ -13,16 +13,8 @@ use crate::model::{self, Amount, AssetId, Balance, Market, RealizedProfit};
 use crate::routes::Context;
 use crate::routes::{redirect_see_other, respond_html, view_header, view_html_head};
 
-// See also how we handle the stylesheet in `mod.rs`.
-#[cfg(debug_assertions)]
 fn get_trade_script() -> Markup {
-    let data =
-        std::fs::read_to_string("src/trade.js").expect("Need to run from repo root in debug mode.");
-    maud::PreEscaped(data)
-}
-
-#[cfg(not(debug_assertions))]
-fn get_trade_script() -> Markup {
+    // See also how we handle the stylesheet in `mod.rs`.
     maud::PreEscaped(include_str!("../trade.js").to_string())
 }
 
