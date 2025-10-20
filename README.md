@@ -68,6 +68,7 @@ git ls-files | entr -r cargo run -- predictomatic.toml
        in the past 7 days.
  * [ ] In the participants table, add a yield column (UPnL / Deposit), possibly
        with a sideways bar chart.
+ * [ ] Add close date metadata to markets, so we know which ones close soon.
 
 ## License
 
