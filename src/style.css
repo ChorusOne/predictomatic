@@ -176,10 +176,6 @@ table .num {
     text-align: right;
 }
 
-details summary {
-    cursor: default;
-}
-
 input, button {
     padding: 0.3rem;
     padding-left: 0.3rem;
@@ -384,6 +380,7 @@ tr.system td.owner {
 .market .summary {
     margin-top: 1rem;
     display: grid;
+    height: 5.2rem;
     grid-template-columns: 5.2rem 1.1rem auto 1fr;
     grid-template-areas: 'teaser _1 stats _2';
 }
@@ -393,15 +390,28 @@ tr.system td.owner {
     border-radius: 0.3rem;
     border: 2pt solid var(--fg);
     text-align: center;
-    font-size: 1.5rem;
-    line-height: 5.2rem;
     font-weight: 400;
+    display: grid;
+    grid-template-rows: 1rem 2.1rem 1fr;
+    grid-template-areas: 'above' 'big' 'below';
 }
 
 .market .summary .teaser.resolved {
     background-color: var(--fg);
     color: var(--bg);
     font-weight: 500;
+}
+
+.market .summary .teaser .big {
+    grid-area: big;
+    font-size: 1.5rem;
+    line-height: 2rem;
+}
+
+.market .summary .below {
+    line-height: 0.9rem;
+    font-size: 0.8rem;
+    grid-area: below;
 }
 
 .market .summary table {

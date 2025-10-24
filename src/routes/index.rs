@@ -19,12 +19,20 @@ fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
     let ps = dist.ps();
 
     let teaser = match market.resolution() {
-        None => html! { p .teaser { (format!("{:.0}%", ps[0] * 100.0)) } },
+        None => html! {
+            div .teaser {
+                span .big { (format!("{:.0}%", ps[0] * 100.0)) }
+                span .below { (market.outcomes[0].value) }
+            }
+        },
         Some(outcome) => html! {
-            p
+            div
                 .teaser .resolved
                 title=(format!("Resolved as {}.", outcome.value))
-                { (outcome.value) }
+            {
+                span .big { (outcome.value) }
+                span .below { "Resolved" }
+            }
         },
     };
 
