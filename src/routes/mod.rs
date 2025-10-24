@@ -155,13 +155,16 @@ fn view_html_head(server_prefix: &str, page_title: &str) -> Markup {
 }
 
 fn get_stylesheet() -> Markup {
-    // In the past, we had different functions for this in debug and release
-    // mode, where in release we embed the data in the binary, and in debug we
-    // load it from disk, so you can edit it and preview without rebuilding.
-    // But it turns out, recompiling is fast enough, you can watch files and
-    // recompile on change, so we can simplify this to just always include.
-    let data = include_str!("../style.css");
-    maud::PreEscaped(data.to_string())
+    // In release, we embed the resource into the binary.
+    #[cfg(not(debug_assertions))]
+    let data = include_str!("../style.css").to_string();
+
+    // In debug mode, read from a file, so that we can reload the page and get
+    // the new version immediately.
+    #[cfg(debug_assertions)]
+    let data = std::fs::read_to_string("src/style.css").expect("Failed to load stylesheet.");
+
+    maud::PreEscaped(data)
 }
 
 fn get_favicon() -> &'static str {
