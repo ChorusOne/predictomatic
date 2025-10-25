@@ -53,13 +53,13 @@ therefore a basket with one share in every outcome is worth $1.
 ## Depositing
 
 When you deposit points into a market,
-you lock up the points,
-and you get an equal amount of shares in every outcome in return.
+you lock up the points.
+In return  you get an equal amount of shares in every outcome.
 For example,
 if you deposit $10 into the example market described earlier,
 you get 10 Yes + 10 No.
 This is a neutral position:
-your proceeds do not depend on how the market resolves.
+your proceeds on resolution do not depend on how the market resolves.
 To take a non-neutral position,
 you can trade the Yes and No shares.
 
@@ -68,12 +68,35 @@ withdrawing from a market is not possible.
 In other words,
 you cannot realize profits until the market resolves.
 This ensures that the market can be dissolved when it is unclear how it should resolve.
-Every participant gets their points back,
+Every participant gets their deposit back,
 and we pretend that no trades ever happened.
 Although it is not possible to withdraw,
-you can exit a position and take profits by trading
+you can exit a non-neutral position and take profits by trading
 until you have an equal amount of every outcome share.
 
 ## Trading
 
-If the current price of Yes
+After depositing, you can trade in a market by moving the probability slider.
+When you trade, you <em>swap</em> outcome shares.
+For example, you buy 5 Yes shares, and you pay for that with 10 No shares.
+You swap shares for other shares, you don’t trade shares for points directly.
+Still, every swap implies a price per share,
+and therefore a probability.
+The ratio of No:Yes corresponds to the odds of a positive outcome.
+Odds of 10:5 mean a probability of 10/15,
+so about 67% probability that ‘Yes’ will happen,
+and 33% that ‘No’ will happen.
+In other words, the average price you paid was $0.67 per Yes share.
+
+## Automated market maker
+
+When you trade,
+you always trade against an automated market maker that is managed by the system.
+The market maker ensures that you can always trade,
+and it provides a way to subsidize the market.
+Prediction markets are zero-sum.
+If you are going to make money here,
+<em>somebody</em> has to be losing money.
+When you are the only participant in a market,
+or when all participants bet in the same direction,
+it’s the system that takes the other side of the bet.

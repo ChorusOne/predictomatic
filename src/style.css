@@ -377,7 +377,7 @@ tr.system td.owner {
 }
 
 .market + .market, p + .market {
-    margin-top: 3rem;
+    margin-top: 0.6rem;
 }
 
 .market .summary {
