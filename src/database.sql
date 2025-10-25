@@ -11,8 +11,26 @@
 -- To be used with <https://github.com/ruuda/squiller>, you need commit
 -- c83d64f644805e70 or later.
 
--- @begin ensure_schema_exists()
-create table if not exists accounts
+-- @query ensure_schema_versions_exists()
+create table if not exists schema_versions
+  ( version    integer not null
+  , created_at text not null
+  );
+
+-- Create the schema.
+--
+-- We always have the latest version of the schema here: it's useful to have a
+-- reference of what the tables and their columns are.
+--
+-- For migrations, we have separate queries below. We only do migrations up; to
+-- go down, simply restore a back-up of your SQLite file before the migration.
+-- @begin create_schema()
+insert into
+  schema_versions (version, created_at)
+values
+  (2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+
+create table accounts
 ( id       integer primary key
   -- 0 for the global accounts (points owned by the user or system), or the id
   -- of the market for accounts associated with a market.
@@ -38,23 +56,25 @@ create table if not exists accounts
 
 -- Events group one or more transfers. We could also call them "transaction",
 -- but that's confusing in a database.
-create table if not exists events
+create table events
 ( id          integer primary key
 , created_at  text not null
 , created_by  text not null
 , description text not null
 );
 
-create table if not exists transfers
-( id              integer primary key
-, event_id        integer not null references events (id)
-, from_account_id integer not null references accounts (id)
-, to_account_id   integer not null references accounts (id)
-, amount          integer not null
+create table transfers
+( id                 integer primary key
+, event_id           integer not null references events (id)
+, from_account_id    integer not null references accounts (id)
+, to_account_id      integer not null references accounts (id)
+, amount             integer not null
+, to_balance_after   integer not null
+, from_balance_after integer not null
 , check (amount > 0)
 );
 
-create table if not exists markets
+create table markets
 ( id          integer primary key
 , slug        text not null
 , created_at  text not null
@@ -65,7 +85,7 @@ create table if not exists markets
 , unique (title)
 );
 
-create table if not exists outcomes
+create table outcomes
 ( id          integer primary key
 , market_id   integer not null references markets (id)
 , value       text not null
@@ -76,7 +96,7 @@ create table if not exists outcomes
 
 -- For resolved markets, we track the realized profit per participant.
 -- Every profit links to a resolution event.
-create table if not exists realized_profits
+create table realized_profits
 ( id               integer primary key
 , market_id        integer not null references markets (id)
 , event_id         integer not null references events (id)
@@ -97,6 +117,23 @@ insert into
   on conflict do nothing;
 
 -- @end ensure_schema_exists()
+
+-- @begin migrate_schema_from_1_to_2()
+insert into
+  schema_versions (version, created_at)
+values
+  (2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+
+-- TODO: Replay all tansfers to compute the balance after.
+alter table transfers
+  add column to_balance_after   integer null,
+  add column from_balance_after integer null;
+
+-- @end migrate_schema_from_1_to_2()
+
+-- @query get_schema_version() ->1 i64
+-- Due to how SQLite works, returns 0 on an empty table.
+select max(version) from schema_versions;
 
 -- Return the account id a given (market_id, asset_id, owner).
 -- @query get_account_id(market_id: i64, asset_id: i64, owner: str) ->? i64
@@ -147,17 +184,30 @@ insert into
 --   to_account_id: i64,
 --   amount: i64,
 -- )
-insert into transfers (event_id, from_account_id, to_account_id, amount)
-  values (:event_id, :from_account_id, :to_account_id, :amount);
-
 update accounts
   set   balance = balance - :amount
-  where (id = :from_account_id)
-    and (:to_account_id is not null) and (:amount > 0);
+  where id = :from_account_id;
 
 update accounts
   set   balance = balance + :amount
   where id = :to_account_id;
+
+insert into transfers
+  ( event_id
+  , from_account_id
+  , to_account_id
+  , amount
+  , from_balance_after
+  , to_balance_after
+  )
+  values
+  ( :event_id
+  , :from_account_id
+  , :to_account_id
+  , :amount
+  , (select balance from accounts where id = :from_account_id)
+  , (select balance from accounts where id = :to_account_id)
+  );
 
 -- @end create_transfer
 

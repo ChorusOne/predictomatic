@@ -78,9 +78,51 @@ impl<'i, 'a, T> Iterator for Iter<'i, 'a, T> {
     }
 }
 
-pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
+pub fn ensure_schema_versions_exists(tx: &mut Transaction) -> Result<()> {
     let sql = r#"
-        create table if not exists accounts
+        create table if not exists schema_versions
+          ( version    integer not null
+          , created_at text not null
+          );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    let result = match statement.next()? {
+        Row => panic!("Query 'ensure_schema_versions_exists' unexpectedly returned a row."),
+        Done => (),
+    };
+    Ok(result)
+}
+
+/// Create the schema.
+///
+/// We always have the latest version of the schema here: it's useful to have a
+/// reference of what the tables and their columns are.
+///
+/// For migrations, we have separate queries below. We only do migrations up; to
+/// go down, simply restore a back-up of your SQLite file before the migration.
+pub fn create_schema(tx: &mut Transaction) -> Result<()> {
+    let sql = r#"
+        insert into
+          schema_versions (version, created_at)
+        values
+          (2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'create_schema' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        create table accounts
         ( id       integer primary key
           -- 0 for the global accounts (points owned by the user or system), or the id
           -- of the market for accounts associated with a market.
@@ -110,14 +152,14 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     };
     statement.reset()?;
     match statement.next()? {
-        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Row => panic!("Query 'create_schema' unexpectedly returned a row."),
         Done => {}
     }
 
     let sql = r#"
         -- Events group one or more transfers. We could also call them "transaction",
         -- but that's confusing in a database.
-        create table if not exists events
+        create table events
         ( id          integer primary key
         , created_at  text not null
         , created_by  text not null
@@ -130,17 +172,19 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     };
     statement.reset()?;
     match statement.next()? {
-        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Row => panic!("Query 'create_schema' unexpectedly returned a row."),
         Done => {}
     }
 
     let sql = r#"
-        create table if not exists transfers
-        ( id              integer primary key
-        , event_id        integer not null references events (id)
-        , from_account_id integer not null references accounts (id)
-        , to_account_id   integer not null references accounts (id)
-        , amount          integer not null
+        create table transfers
+        ( id                 integer primary key
+        , event_id           integer not null references events (id)
+        , from_account_id    integer not null references accounts (id)
+        , to_account_id      integer not null references accounts (id)
+        , amount             integer not null
+        , to_balance_after   integer not null
+        , from_balance_after integer not null
         , check (amount > 0)
         );
         "#;
@@ -150,12 +194,12 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     };
     statement.reset()?;
     match statement.next()? {
-        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Row => panic!("Query 'create_schema' unexpectedly returned a row."),
         Done => {}
     }
 
     let sql = r#"
-        create table if not exists markets
+        create table markets
         ( id          integer primary key
         , slug        text not null
         , created_at  text not null
@@ -172,12 +216,12 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     };
     statement.reset()?;
     match statement.next()? {
-        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Row => panic!("Query 'create_schema' unexpectedly returned a row."),
         Done => {}
     }
 
     let sql = r#"
-        create table if not exists outcomes
+        create table outcomes
         ( id          integer primary key
         , market_id   integer not null references markets (id)
         , value       text not null
@@ -192,14 +236,14 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     };
     statement.reset()?;
     match statement.next()? {
-        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Row => panic!("Query 'create_schema' unexpectedly returned a row."),
         Done => {}
     }
 
     let sql = r#"
         -- For resolved markets, we track the realized profit per participant.
         -- Every profit links to a resolution event.
-        create table if not exists realized_profits
+        create table realized_profits
         ( id               integer primary key
         , market_id        integer not null references markets (id)
         , event_id         integer not null references events (id)
@@ -216,7 +260,7 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     };
     statement.reset()?;
     match statement.next()? {
-        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Row => panic!("Query 'create_schema' unexpectedly returned a row."),
         Done => {}
     }
 
@@ -236,9 +280,64 @@ pub fn ensure_schema_exists(tx: &mut Transaction) -> Result<()> {
     };
     statement.reset()?;
     let result = match statement.next()? {
-        Row => panic!("Query 'ensure_schema_exists' unexpectedly returned a row."),
+        Row => panic!("Query 'create_schema' unexpectedly returned a row."),
         Done => (),
     };
+    Ok(result)
+}
+
+pub fn migrate_schema_from_1_to_2(tx: &mut Transaction) -> Result<()> {
+    let sql = r#"
+        insert into
+          schema_versions (version, created_at)
+        values
+          (2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'migrate_schema_from_1_to_2' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        -- TODO: Replay all tansfers to compute the balance after.
+        alter table transfers
+          add column to_balance_after   integer null,
+          add column from_balance_after integer null;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    let result = match statement.next()? {
+        Row => panic!("Query 'migrate_schema_from_1_to_2' unexpectedly returned a row."),
+        Done => (),
+    };
+    Ok(result)
+}
+
+pub fn get_schema_version(tx: &mut Transaction) -> Result<i64> {
+    let sql = r#"
+        select max(version) from schema_versions;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    let decode_row = |statement: &Statement| Ok(statement.read(0)?);
+    let result = match statement.next()? {
+        Row => decode_row(statement)?,
+        Done => panic!("Query 'get_schema_version' should return exactly one row."),
+    };
+    if statement.next()? != Done {
+        panic!("Query 'get_schema_version' should return exactly one row.");
+    }
     Ok(result)
 }
 
@@ -380,28 +479,9 @@ pub fn create_transfer(
     amount: i64,
 ) -> Result<()> {
     let sql = r#"
-        insert into transfers (event_id, from_account_id, to_account_id, amount)
-          values (:event_id, :from_account_id, :to_account_id, :amount);
-        "#;
-    let statement = match tx.statements.entry(sql.as_ptr()) {
-        Occupied(entry) => entry.into_mut(),
-        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
-    };
-    statement.reset()?;
-    statement.bind(1, event_id)?;
-    statement.bind(2, from_account_id)?;
-    statement.bind(3, to_account_id)?;
-    statement.bind(4, amount)?;
-    match statement.next()? {
-        Row => panic!("Query 'create_transfer' unexpectedly returned a row."),
-        Done => {}
-    }
-
-    let sql = r#"
         update accounts
           set   balance = balance - :amount
-          where (id = :from_account_id)
-            and (:to_account_id is not null) and (:amount > 0);
+          where id = :from_account_id;
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),
@@ -410,7 +490,6 @@ pub fn create_transfer(
     statement.reset()?;
     statement.bind(1, amount)?;
     statement.bind(2, from_account_id)?;
-    statement.bind(3, to_account_id)?;
     match statement.next()? {
         Row => panic!("Query 'create_transfer' unexpectedly returned a row."),
         Done => {}
@@ -428,6 +507,38 @@ pub fn create_transfer(
     statement.reset()?;
     statement.bind(1, amount)?;
     statement.bind(2, to_account_id)?;
+    match statement.next()? {
+        Row => panic!("Query 'create_transfer' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        insert into transfers
+          ( event_id
+          , from_account_id
+          , to_account_id
+          , amount
+          , from_balance_after
+          , to_balance_after
+          )
+          values
+          ( :event_id
+          , :from_account_id
+          , :to_account_id
+          , :amount
+          , (select balance from accounts where id = :from_account_id)
+          , (select balance from accounts where id = :to_account_id)
+          );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, event_id)?;
+    statement.bind(2, from_account_id)?;
+    statement.bind(3, to_account_id)?;
+    statement.bind(4, amount)?;
     let result = match statement.next()? {
         Row => panic!("Query 'create_transfer' unexpectedly returned a row."),
         Done => (),

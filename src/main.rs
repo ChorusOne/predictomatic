@@ -280,7 +280,13 @@ fn initialize_database(config: &DatabaseConfig, markets: &[MarketConfig]) -> db:
     let raw_connection = sqlite::open(&config.path).expect("Failed to open database.");
     let mut connection = connect_database(&raw_connection).expect("Failed to connect to database.");
     let mut tx = connection.begin()?;
-    db::ensure_schema_exists(&mut tx)?;
+    db::ensure_schema_versions_exists(&mut tx)?;
+    match db::get_schema_version(&mut tx)? {
+        0 => db::create_schema(&mut tx)?,
+        1 => panic!("Database schema is too old, run migrations first."),
+        2 => { /* Ok, as expected. */ }
+        n => panic!("Database schema version {n} is newer than supported."),
+    }
     model::ensure_markets(&mut tx, markets)?;
     tx.commit()
 }
