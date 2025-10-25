@@ -183,8 +183,8 @@ pub fn create_schema(tx: &mut Transaction) -> Result<()> {
         , from_account_id    integer not null references accounts (id)
         , to_account_id      integer not null references accounts (id)
         , amount             integer not null
-        , to_balance_after   integer not null
         , from_balance_after integer not null
+        , to_balance_after   integer not null
         , check (amount > 0)
         );
         "#;
@@ -304,10 +304,109 @@ pub fn migrate_schema_from_1_to_2(tx: &mut Transaction) -> Result<()> {
     }
 
     let sql = r#"
-        -- TODO: Replay all tansfers to compute the balance after.
-        alter table transfers
-          add column to_balance_after   integer null,
-          add column from_balance_after integer null;
+        alter table transfers rename to transfers_v1;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'migrate_schema_from_1_to_2' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        create table transfers
+          ( id                 integer primary key
+          , event_id           integer not null references events (id)
+          , from_account_id    integer not null references accounts (id)
+          , to_account_id      integer not null references accounts (id)
+          , amount             integer not null
+          , from_balance_after integer not null
+          , to_balance_after   integer not null
+          , check (amount > 0)
+          );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'migrate_schema_from_1_to_2' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        with
+        balance_from_after (transfer_id, from_account_id, balance_after) as (
+          select
+            t1.id as transfer_id,
+            t1.from_account_id as from_account_id,
+            coalesce((
+              select sum(t2.amount) from transfers_v1 t2
+              where (t2.id < t1.id) and (t1.from_account_id = t2.to_account_id)
+            ), 0) - coalesce((
+              select sum(t2.amount) from transfers_v1 t2
+              where (t2.id < t1.id) and (t1.from_account_id = t2.from_account_id)
+            ), 0) - t1.amount
+          from
+            transfers_v1 t1
+        ),
+        
+        balance_to_after (transfer_id, to_account_id, balance_after) as (
+          select
+            t1.id as transfer_id,
+            t1.to_account_id as to_account_id,
+            coalesce((
+              select sum(t2.amount) from transfers_v1 t2
+              where (t2.id < t1.id) and (t1.to_account_id = t2.to_account_id)
+            ), 0) - coalesce((
+              select sum(t2.amount) from transfers_v1 t2
+              where (t2.id < t1.id) and (t1.to_account_id = t2.from_account_id)
+            ), 0) + t1.amount
+          from
+            transfers_v1 t1
+        )
+        
+        insert into transfers
+          ( id
+          , event_id
+          , from_account_id
+          , to_account_id
+          , amount
+          , from_balance_after
+          , to_balance_after
+          )
+        select
+          t1.id,
+          t1.event_id,
+          t1.from_account_id,
+          t1.to_account_id,
+          t1.amount,
+          balance_from_after.balance_after as from_balance_after,
+          balance_to_after.balance_after as to_balance_after
+        from
+          transfers_v1 t1,
+          balance_from_after,
+          balance_to_after
+        where true
+          and (t1.id = balance_from_after.transfer_id)
+          and (t1.id = balance_to_after.transfer_id);
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'migrate_schema_from_1_to_2' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        drop table transfers_v1;
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),

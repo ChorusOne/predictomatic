@@ -69,8 +69,8 @@ create table transfers
 , from_account_id    integer not null references accounts (id)
 , to_account_id      integer not null references accounts (id)
 , amount             integer not null
-, to_balance_after   integer not null
 , from_balance_after integer not null
+, to_balance_after   integer not null
 , check (amount > 0)
 );
 
@@ -124,10 +124,76 @@ insert into
 values
   (2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
 
--- TODO: Replay all tansfers to compute the balance after.
-alter table transfers
-  add column to_balance_after   integer null,
-  add column from_balance_after integer null;
+alter table transfers rename to transfers_v1;
+
+create table transfers
+  ( id                 integer primary key
+  , event_id           integer not null references events (id)
+  , from_account_id    integer not null references accounts (id)
+  , to_account_id      integer not null references accounts (id)
+  , amount             integer not null
+  , from_balance_after integer not null
+  , to_balance_after   integer not null
+  , check (amount > 0)
+  );
+
+with
+balance_from_after (transfer_id, from_account_id, balance_after) as (
+  select
+    t1.id as transfer_id,
+    t1.from_account_id as from_account_id,
+    coalesce((
+      select sum(t2.amount) from transfers_v1 t2
+      where (t2.id < t1.id) and (t1.from_account_id = t2.to_account_id)
+    ), 0) - coalesce((
+      select sum(t2.amount) from transfers_v1 t2
+      where (t2.id < t1.id) and (t1.from_account_id = t2.from_account_id)
+    ), 0) - t1.amount
+  from
+    transfers_v1 t1
+),
+
+balance_to_after (transfer_id, to_account_id, balance_after) as (
+  select
+    t1.id as transfer_id,
+    t1.to_account_id as to_account_id,
+    coalesce((
+      select sum(t2.amount) from transfers_v1 t2
+      where (t2.id < t1.id) and (t1.to_account_id = t2.to_account_id)
+    ), 0) - coalesce((
+      select sum(t2.amount) from transfers_v1 t2
+      where (t2.id < t1.id) and (t1.to_account_id = t2.from_account_id)
+    ), 0) + t1.amount
+  from
+    transfers_v1 t1
+)
+
+insert into transfers
+  ( id
+  , event_id
+  , from_account_id
+  , to_account_id
+  , amount
+  , from_balance_after
+  , to_balance_after
+  )
+select
+  t1.id,
+  t1.event_id,
+  t1.from_account_id,
+  t1.to_account_id,
+  t1.amount,
+  balance_from_after.balance_after as from_balance_after,
+  balance_to_after.balance_after as to_balance_after
+from
+  transfers_v1 t1,
+  balance_from_after,
+  balance_to_after
+where true
+  and (t1.id = balance_from_after.transfer_id)
+  and (t1.id = balance_to_after.transfer_id);
+
+drop table transfers_v1;
 
 -- @end migrate_schema_from_1_to_2()
 
