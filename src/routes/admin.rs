@@ -8,6 +8,7 @@
 use maud::{Markup, html};
 
 use crate::Response;
+use crate::database as db;
 use crate::routes::{Context, Result, index, respond_html, view_header, view_html_head};
 
 fn view_bonus_page(ctx: &Context) -> Markup {
@@ -18,6 +19,21 @@ fn view_bonus_page(ctx: &Context) -> Markup {
             div .main .wider {
                 section {
                     h1 { "Distribute bonus" }
+                    p {
+                        "A bonus is a one-time payment of additional points. "
+                        "Every existing user will receive the bonus. "
+                        "A bonus does not affect future sign-ups."
+                    }
+                    p {
+                        form method="post" action={ (ctx.prefix) "/bonus/create" } {
+                            label {
+                                "Amount "
+                                input #input-bonus-amount name="amount" value="$10.00";
+                            }
+                            " "
+                            button #button-distribute type="submit" { "Distribute" }
+                        }
+                    }
                 }
                 aside { (index::view_main_aside(ctx)) }
             }
@@ -27,5 +43,15 @@ fn view_bonus_page(ctx: &Context) -> Markup {
 
 pub fn handle_bonus_page(ctx: &Context) -> Result<Response> {
     ctx.ensure_admin()?;
+    Ok(respond_html(view_bonus_page(ctx)))
+}
+
+pub fn handle_bonus_create(
+    tx: &mut db::Transaction,
+    ctx: &Context,
+    body: &str,
+) -> Result<Response> {
+    ctx.ensure_admin()?;
+    // TODO: Implement.
     Ok(respond_html(view_bonus_page(ctx)))
 }

@@ -242,7 +242,7 @@ pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> Res
         ["leaderboard"] => leaderboard::handle_leaderboard(tx, ctx),
         ["ledger"] => ledger::handle_ledger(ctx),
         ["market", market_slug] => market::handle_market(tx, ctx, market_slug),
-        ["admin", "bonus"] => admin::handle_bonus_page(ctx),
+        ["bonus"] => admin::handle_bonus_page(ctx),
         _ => ctx.not_found("Not found."),
     }
 }
@@ -259,6 +259,7 @@ pub fn handle_post(
         ["market", market_slug, "resolve", outcome] => {
             market::handle_resolve(tx, ctx, market_slug, outcome)
         }
+        ["bonus", "create"] => admin::handle_bonus_create(tx, ctx, body),
         _ => ctx.not_found("Not found."),
     }
 }
