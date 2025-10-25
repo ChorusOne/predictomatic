@@ -10,8 +10,9 @@ use maud::{Markup, html};
 use crate::Response;
 use crate::database as db;
 use crate::model::{self, Amount, AssetId, Balance, Market, RealizedProfit};
-use crate::routes::Context;
-use crate::routes::{redirect_see_other, respond_html, view_header, view_html_head};
+use crate::routes::{
+    Context, Result, redirect_see_other, respond_html, view_header, view_html_head,
+};
 
 fn get_trade_script() -> Markup {
     // See also how we handle the stylesheet in `mod.rs`.
@@ -330,16 +331,23 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
     }
 }
 
+fn get_market_by_slug(
+    tx: &mut db::Transaction,
+    ctx: &Context,
+    market_slug: &str,
+) -> Result<Market> {
+    match model::get_market_by_slug(tx, market_slug)? {
+        None => ctx.not_found("No such market exists."),
+        Some(market) => Ok(market),
+    }
+}
+
 pub fn handle_market(
     tx: &mut db::Transaction,
     ctx: &Context,
     market_slug: &str,
-) -> db::Result<Response> {
-    let market = match model::get_market_by_slug(tx, market_slug)? {
-        None => return ctx.not_found("No such market exists."),
-        Some(market) => market,
-    };
-
+) -> Result<Response> {
+    let market = get_market_by_slug(tx, ctx, market_slug)?;
     let body = view_market(ctx, &market);
     Ok(respond_html(body))
 }
@@ -349,11 +357,8 @@ pub fn handle_deposit(
     ctx: &Context,
     market_slug: &str,
     body: &str,
-) -> db::Result<Response> {
-    let market = match model::get_market_by_slug(tx, market_slug)? {
-        None => return ctx.not_found("No such market exists."),
-        Some(market) => market,
-    };
+) -> Result<Response> {
+    let market = get_market_by_slug(tx, ctx, market_slug)?;
 
     let mut amount = AssetId::POINTS.zero();
 
@@ -386,13 +391,10 @@ pub fn handle_trade(
     ctx: &Context,
     market_slug: &str,
     body: &str,
-) -> db::Result<Response> {
+) -> Result<Response> {
     use std::str::FromStr;
 
-    let market = match model::get_market_by_slug(tx, market_slug)? {
-        None => return ctx.not_found("No such market exists."),
-        Some(market) => market,
-    };
+    let market = get_market_by_slug(tx, ctx, market_slug)?;
 
     let mut amount_in_str = None;
     let mut min_out_str = None;
@@ -486,13 +488,10 @@ pub fn handle_resolve(
     ctx: &Context,
     market_slug: &str,
     outcome_str: &str,
-) -> db::Result<Response> {
+) -> Result<Response> {
     use std::str::FromStr;
 
-    let market = match model::get_market_by_slug(tx, market_slug)? {
-        None => return ctx.not_found("No such market exists."),
-        Some(market) => market,
-    };
+    let market = get_market_by_slug(tx, ctx, market_slug)?;
 
     if !ctx.is_admin {
         return ctx.forbidden("Only admins are allowed to resolve markets.");

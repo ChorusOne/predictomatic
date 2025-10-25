@@ -8,8 +8,7 @@
 use maud::{Markup, html};
 
 use crate::Response;
-use crate::database as db;
-use crate::routes::{Context, index, respond_html, view_header, view_html_head};
+use crate::routes::{Context, Result, index, respond_html, view_header, view_html_head};
 
 fn view_help(ctx: &Context) -> Markup {
     html! {
@@ -79,6 +78,6 @@ fn view_help(ctx: &Context) -> Markup {
     }
 }
 
-pub fn handle_help(ctx: &Context) -> db::Result<Response> {
+pub fn handle_help(ctx: &Context) -> Result<Response> {
     Ok(respond_html(view_help(ctx)))
 }

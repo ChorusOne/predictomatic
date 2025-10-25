@@ -16,7 +16,7 @@ use tiny_http::{HeaderField, Method, Request, Server};
 
 use crate::config::{AppConfig, Config, DatabaseConfig, MarketConfig, ServerConfig};
 use crate::database as db;
-use crate::routes::{internal_error, service_unavailable};
+use crate::routes::{Error, Result, internal_error, service_unavailable};
 
 mod config;
 mod database;
@@ -152,12 +152,12 @@ fn with_transaction<F>(
     mut f: F,
 ) -> db::Result<Response>
 where
-    F: FnMut(&mut db::Transaction) -> db::Result<Response>,
+    F: FnMut(&mut db::Transaction) -> Result<Response>,
 {
     for attempt in 0.. {
         let mut tx = connection.begin()?;
         match f(&mut tx) {
-            Ok(response) => {
+            Ok(response) | Err(Error::Response(response)) => {
                 // Commit on success responses (we assume redirects to be success
                 // as well, for example for use after submitting a form). If we
                 // encounter any error, roll back. We do this here because
@@ -170,7 +170,7 @@ where
                 }
                 return Ok(response);
             }
-            Err(err) if err.code == Some(5) => {
+            Err(Error::Database(err)) if err.code == Some(5) => {
                 tx.rollback()?;
                 println!("Database is locked (attempt {}): {err:?}", attempt + 1);
                 // The database is locked by a writer. Retry if we haven't
@@ -184,7 +184,7 @@ where
                     ));
                 }
             }
-            Err(err) => {
+            Err(Error::Database(err)) => {
                 // Try to roll back, but if it doesn't work, we are going to
                 // open a new connection anyway.
                 let _ = tx.rollback();

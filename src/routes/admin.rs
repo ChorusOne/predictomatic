@@ -10,21 +10,14 @@ use maud::{Markup, html};
 use crate::Response;
 use crate::routes::{Context, Result, index, respond_html, view_header, view_html_head};
 
-fn view_ledger(ctx: &Context) -> Markup {
+fn view_bonus_page(ctx: &Context) -> Markup {
     html! {
-        (view_html_head(ctx.prefix, "Ledger — Predict-o-matic"))
+        (view_html_head(ctx.prefix, "Predict-o-matic"))
         body {
             (view_header(ctx))
             div .main .wider {
                 section {
-                    h1 { "Ledger" }
-                    p {
-                        "I would like to show the log of all your trades here,
-                        and other balance changes to your accounts.
-                        Unfortunately this is not yet implemented. Rest assured
-                        though, your full transaction history is stored safely
-                        in the database."
-                    }
+                    h1 { "Distribute bonus" }
                 }
                 aside { (index::view_main_aside(ctx)) }
             }
@@ -32,6 +25,7 @@ fn view_ledger(ctx: &Context) -> Markup {
     }
 }
 
-pub fn handle_ledger(ctx: &Context) -> Result<Response> {
-    Ok(respond_html(view_ledger(ctx)))
+pub fn handle_bonus_page(ctx: &Context) -> Result<Response> {
+    ctx.ensure_admin()?;
+    Ok(respond_html(view_bonus_page(ctx)))
 }

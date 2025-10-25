@@ -10,9 +10,8 @@ use maud::{Markup, html};
 use crate::Response;
 use crate::database as db;
 use crate::model::{self, Amount, AssetId, Market};
-use crate::routes::Context;
 use crate::routes::index;
-use crate::routes::{respond_html, view_header, view_html_head};
+use crate::routes::{Context, Result, respond_html, view_header, view_html_head};
 
 struct MarketAssets<'a> {
     market: &'a Market,
@@ -126,7 +125,7 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
     }
 }
 
-pub fn handle_assets_overview(tx: &mut db::Transaction, ctx: &Context) -> db::Result<Response> {
+pub fn handle_assets_overview(tx: &mut db::Transaction, ctx: &Context) -> Result<Response> {
     // TODO: See also the note in index.rs about the inefficiency to iterate all
     // markets. On top of that, for the asset overview we don't need all markets,
     // and we don't need all accounts of all users! But for now we load them

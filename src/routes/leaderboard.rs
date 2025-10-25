@@ -12,9 +12,8 @@ use maud::{Markup, html};
 use crate::Response;
 use crate::database as db;
 use crate::model::{self, Amount, AssetId};
-use crate::routes::Context;
 use crate::routes::index;
-use crate::routes::{respond_html, view_header, view_html_head};
+use crate::routes::{Context, Result, respond_html, view_header, view_html_head};
 
 struct UserNetWorth {
     /// Liquid points in the user's global points account.
@@ -73,7 +72,7 @@ fn view_net_worth_list(ctx: &Context, users_net_worth: &[(String, UserNetWorth)]
     }
 }
 
-pub fn handle_leaderboard(tx: &mut db::Transaction, ctx: &Context) -> db::Result<Response> {
+pub fn handle_leaderboard(tx: &mut db::Transaction, ctx: &Context) -> Result<Response> {
     // See also the note in `handle_assets_overview`.
     // TODO: Add at least a way to only query the open markets.
     let market_slugs: Vec<_> = db::get_market_slugs(tx)?.collect();

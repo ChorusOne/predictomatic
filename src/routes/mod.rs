@@ -5,6 +5,7 @@
 // you may not use this file except in compliance with the License.
 // A copy of the License has been included in the root of the repository.
 
+mod admin;
 mod assets;
 mod help;
 mod index;
@@ -19,6 +20,29 @@ use crate::Response;
 use crate::config::{AppConfig, ServerConfig};
 use crate::database as db;
 use crate::model::{self, Amount, Market};
+
+/// An error, either internal (e.g. database) or logic (e.g. access denied).
+///
+/// We have an error response so we can use the `?`-operator to short circuit
+/// e.g. access checks.
+pub enum Error {
+    Database(sqlite::Error),
+    Response(Response),
+}
+
+impl From<sqlite::Error> for Error {
+    fn from(db_err: sqlite::Error) -> Error {
+        Error::Database(db_err)
+    }
+}
+
+impl From<Response> for Error {
+    fn from(response: Response) -> Error {
+        Error::Response(response)
+    }
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Context<'a> {
     config: &'a AppConfig,
@@ -66,24 +90,40 @@ impl<'a> Context<'a> {
         }
     }
 
+    pub fn ensure_admin(&self) -> Result<()> {
+        if self.is_admin {
+            Ok(())
+        } else {
+            self.forbidden("This page is only accessible to admins.")
+        }
+    }
+
     /// Serve a bad request response.
     ///
     /// This is just a wrapper, but we add it here because this error is used a
     /// lot, and it's annoying to write it out by hand all the time.
-    fn bad_request<R: Into<String>>(&self, reason: R) -> db::Result<Response> {
-        Ok(respond_error(self.prefix, reason).with_status_code(400))
+    fn bad_request<T, R: Into<String>>(&self, reason: R) -> Result<T> {
+        Err(respond_error(self.prefix, reason)
+            .with_status_code(400)
+            .into())
     }
 
-    fn forbidden<R: Into<String>>(&self, reason: R) -> db::Result<Response> {
-        Ok(respond_error(self.prefix, reason).with_status_code(403))
+    fn forbidden<T, R: Into<String>>(&self, reason: R) -> Result<T> {
+        Err(respond_error(self.prefix, reason)
+            .with_status_code(403)
+            .into())
     }
 
-    fn not_found<R: Into<String>>(&self, reason: R) -> db::Result<Response> {
-        Ok(respond_error(self.prefix, reason).with_status_code(404))
+    fn not_found<T, R: Into<String>>(&self, reason: R) -> Result<T> {
+        Err(respond_error(self.prefix, reason)
+            .with_status_code(404)
+            .into())
     }
 
-    fn conflict<R: Into<String>>(&self, reason: R) -> db::Result<Response> {
-        Ok(respond_error(self.prefix, reason).with_status_code(409))
+    fn conflict<T, R: Into<String>>(&self, reason: R) -> Result<T> {
+        Err(respond_error(self.prefix, reason)
+            .with_status_code(409)
+            .into())
     }
 }
 
@@ -193,7 +233,7 @@ fn view_header(ctx: &Context) -> Markup {
     }
 }
 
-pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> db::Result<Response> {
+pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> Result<Response> {
     match path {
         [] | [""] => index::handle_index(tx, ctx),
         ["assets"] => assets::handle_assets_overview(tx, ctx),
@@ -202,6 +242,7 @@ pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> db:
         ["leaderboard"] => leaderboard::handle_leaderboard(tx, ctx),
         ["ledger"] => ledger::handle_ledger(ctx),
         ["market", market_slug] => market::handle_market(tx, ctx, market_slug),
+        ["admin", "bonus"] => admin::handle_bonus_page(ctx),
         _ => ctx.not_found("Not found."),
     }
 }
@@ -211,7 +252,7 @@ pub fn handle_post(
     ctx: &Context,
     path: &[&str],
     body: &str,
-) -> db::Result<Response> {
+) -> Result<Response> {
     match path {
         ["market", market_slug, "deposit"] => market::handle_deposit(tx, ctx, market_slug, body),
         ["market", market_slug, "trade"] => market::handle_trade(tx, ctx, market_slug, body),
