@@ -641,6 +641,27 @@ pub fn create_trade(
     Ok(())
 }
 
+pub fn create_bonus(tx: &mut Transaction, amount: Amount, admin_email: &str) -> Result<()> {
+    let event = EventId(db::create_event(tx, admin_email, "Bonus")?);
+
+    // The from account is the system's global points account.
+    let neg = AccountConstraint::Negative;
+    let acc_from = ensure_account(tx, MarketId::NONE, AssetId::POINTS, "SYSTEM", neg)?;
+
+    let mut user_accounts = Vec::new();
+
+    // The global points accounts are exactly those not associated with a market.
+    for res_account in db::get_user_points_accounts(tx)? {
+        user_accounts.push(AccountId(res_account?.id, AssetId::POINTS));
+    }
+
+    for acc_to in user_accounts {
+        create_transfer(tx, event, acc_from, acc_to, amount)?;
+    }
+
+    Ok(())
+}
+
 pub fn create_resolution(tx: &mut Transaction, market: &Market, outcome: OutcomeId) -> Result<()> {
     assert_eq!(outcome.1, market.id);
 

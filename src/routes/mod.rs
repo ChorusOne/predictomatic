@@ -12,6 +12,7 @@ mod index;
 mod leaderboard;
 mod ledger;
 mod market;
+mod util;
 
 use maud::{DOCTYPE, Markup, html};
 use tiny_http::Header;

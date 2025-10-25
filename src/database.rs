@@ -623,7 +623,7 @@ pub fn create_outcome(tx: &mut Transaction, market_id: i64, value: &str) -> Resu
 }
 
 #[derive(Debug)]
-pub struct Account {
+pub struct MarketAccount {
     pub asset_id: i64,
     pub owner: String,
     pub balance: i64,
@@ -633,7 +633,7 @@ pub struct Account {
 pub fn get_market_accounts<'i, 't, 'a>(
     tx: &'i mut Transaction<'t, 'a>,
     market_id: i64,
-) -> Result<Iter<'i, 'a, Account>> {
+) -> Result<Iter<'i, 'a, MarketAccount>> {
     let sql = r#"
         select
             asset_id
@@ -651,10 +651,46 @@ pub fn get_market_accounts<'i, 't, 'a>(
     statement.reset()?;
     statement.bind(1, market_id)?;
     let decode_row = |statement: &Statement| {
-        Ok(Account {
+        Ok(MarketAccount {
             asset_id: statement.read(0)?,
             owner: statement.read(1)?,
             balance: statement.read(2)?,
+        })
+    };
+    let result = Iter {
+        statement,
+        decode_row,
+    };
+    Ok(result)
+}
+
+#[derive(Debug)]
+pub struct UserPointsAccount {
+    pub id: i64,
+}
+
+/// Return ids of all global (not associated with a market) points accounts.
+/// Excludes the system account.
+pub fn get_user_points_accounts<'i, 't, 'a>(
+    tx: &'i mut Transaction<'t, 'a>,
+) -> Result<Iter<'i, 'a, UserPointsAccount>> {
+    let sql = r#"
+        select
+            id
+        from
+          accounts
+        where
+          -- Market id 0 means no market, asset id 0 is the points asset.
+          (market_id = 0) and (asset_id = 0) and (owner <> 'SYSTEM');
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    let decode_row = |statement: &Statement| {
+        Ok(UserPointsAccount {
+            id: statement.read(0)?,
         })
     };
     let result = Iter {

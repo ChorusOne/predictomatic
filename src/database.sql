@@ -217,7 +217,7 @@ insert into outcomes (market_id, value)
   returning id;
 
 -- Return balances of all accounts related to the given market.
--- @query get_market_accounts(market_id: i64) ->* Account
+-- @query get_market_accounts(market_id: i64) ->* MarketAccount
 select
     asset_id -- :i64
   , owner    -- :str
@@ -226,6 +226,17 @@ from
   accounts
 where
   market_id = :market_id;
+
+-- Return ids of all global (not associated with a market) points accounts.
+-- Excludes the system account.
+-- @query get_user_points_accounts() ->* UserPointsAccount
+select
+    id -- :i64
+from
+  accounts
+where
+  -- Market id 0 means no market, asset id 0 is the points asset.
+  (market_id = 0) and (asset_id = 0) and (owner <> 'SYSTEM');
 
 -- Return balances of all global (not associated with a market) points accounts.
 -- @query get_points_accounts() ->* PointsAccount

@@ -10,6 +10,7 @@ use maud::{Markup, html};
 use crate::Response;
 use crate::database as db;
 use crate::model::{self, Amount, AssetId, Balance, Market, RealizedProfit};
+use crate::routes::util;
 use crate::routes::{
     Context, Result, redirect_see_other, respond_html, view_header, view_html_head,
 };
@@ -359,30 +360,8 @@ pub fn handle_deposit(
     body: &str,
 ) -> Result<Response> {
     let market = get_market_by_slug(tx, ctx, market_slug)?;
-
-    let mut amount = AssetId::POINTS.zero();
-
-    for (key, value) in form_urlencoded::parse(body.as_bytes()) {
-        match key.as_ref() {
-            "amount" => {
-                // A dollar sign is optional, we include it in the UI by default
-                // to make things clearer, but it's actually annoying to type so
-                // it's not mandatory.
-                match AssetId::POINTS.parse_amount(value.as_ref().trim_start_matches('$')) {
-                    None => return ctx.bad_request("Failed to parse amount."),
-                    Some(n) => amount = n,
-                }
-            }
-            _ => return ctx.bad_request("Unexpected form data."),
-        }
-    }
-
-    if amount <= AssetId::POINTS.zero() {
-        return ctx.bad_request(format!("Amount must be greater than 0, but got {amount}."));
-    }
-
+    let amount = util::parse_form_amount(ctx, body)?;
     model::create_deposit(tx, &market, amount, ctx.user_email)?;
-
     Ok(redirect_see_other(ctx.market_url(&market, "")))
 }
 

@@ -9,7 +9,11 @@ use maud::{Markup, html};
 
 use crate::Response;
 use crate::database as db;
-use crate::routes::{Context, Result, index, respond_html, view_header, view_html_head};
+use crate::model::{self};
+use crate::routes::util;
+use crate::routes::{
+    Context, Result, index, redirect_see_other, respond_html, view_header, view_html_head,
+};
 
 fn view_bonus_page(ctx: &Context) -> Markup {
     html! {
@@ -52,6 +56,7 @@ pub fn handle_bonus_create(
     body: &str,
 ) -> Result<Response> {
     ctx.ensure_admin()?;
-    // TODO: Implement.
-    Ok(respond_html(view_bonus_page(ctx)))
+    let amount = util::parse_form_amount(ctx, body)?;
+    model::create_bonus(tx, amount, ctx.user_email)?;
+    Ok(redirect_see_other(format!("{}/bonus", ctx.prefix)))
 }
