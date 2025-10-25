@@ -25,7 +25,7 @@ and the price of a share corresponds to
 the probability that the outcome will happen.
 In this way,
 Predict-o-matic aggregates input from users
-into a single <em>market prediction</em>.
+into a single market prediction.
 
 ## Points
 
@@ -33,7 +33,7 @@ Predict-o-matic simulates a virtual economy
 where the main currency is <em>points</em>,
 denoted with the ‘$’-symbol.
 Every new user starts out with some points.
-You have POINTS of them right now,
+You have $POINTS of them right now,
 which you can also see in the top-right corner of the screen.
 Prediction markets are zero-sum games
 where points flow from those who make bad predictions
@@ -42,13 +42,13 @@ to those who make good predictions.
 ## Outcome shares
 
 As long as the market is open,
-outcome shares have a price between $&thinsp;0.00 and $&thinsp;1.00.
+outcome shares have a price between $0 and $1.
 When a market resolves,
-shares in the outcome that it resolved to pay out $&thinsp;1,
+shares in the outcome that it resolved to pay out $1,
 and other shares become worthless.
 If you have a share in every outcome,
-then you will receive $&thinsp;1 at resolution regardless of how the market resolves,
-therefore a basket with one share in every outcome is worth $&thinsp;1.
+then you will receive $1 at resolution regardless of how the market resolves,
+therefore a basket with one share in every outcome is worth $1.
 
 ## Depositing
 
@@ -56,12 +56,15 @@ When you deposit points into a market,
 you lock up the points,
 and you get an equal amount of shares in every outcome in return.
 For example,
-if you deposit $&thinsp;10 into the example market described earlier,
+if you deposit $10 into the example market described earlier,
 you get 10 Yes + 10 No.
-You can trade those Yes and No shares to enter a position.
+This is a neutral position:
+your proceeds do not depend on how the market resolves.
+To take a non-neutral position,
+you can trade the Yes and No shares.
 
-You can deposit more points into a market,
-but you cannot withdraw from a market.
+Deposited points are locked until resolution,
+withdrawing from a market is not possible.
 In other words,
 you cannot realize profits until the market resolves.
 This ensures that the market can be dissolved when it is unclear how it should resolve.

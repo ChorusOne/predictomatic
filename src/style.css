@@ -95,7 +95,10 @@ section h1 {
 }
 
 h2 {
-    margin-top: 2.4rem;
+    /* We use padding rather than margin here, so that if you put an anchor on
+     * a h2, when the browser aligns the viewport to it, it's not right against
+     * the top of the window, there is some ... padding above! */
+    padding-top: 2.4rem;
     margin-bottom: 0.5rem;
     font-size: 1.4rem;
     line-height: 1.7rem;
