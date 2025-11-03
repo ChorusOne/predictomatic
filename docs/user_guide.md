@@ -68,8 +68,9 @@ withdrawing from a market is not possible.
 In other words,
 you cannot realize profits until the market resolves.
 This ensures that the market can be dissolved when it is unclear how it should resolve.
-Every participant gets their deposit back,
-and we pretend that no trades ever happened.
+When a market dissolves,
+every participant gets their deposit back,
+as if no trades ever happened.
 Although it is not possible to withdraw,
 you can exit a non-neutral position and take profits by trading
 until you have an equal amount of every outcome share.
