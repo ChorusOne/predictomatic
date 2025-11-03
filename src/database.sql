@@ -198,8 +198,7 @@ drop table transfers_v1;
 -- @end migrate_schema_from_1_to_2()
 
 -- @query get_schema_version() ->1 i64
--- Due to how SQLite works, returns 0 on an empty table.
-select max(version) from schema_versions;
+select coalesce(max(version), 0) from schema_versions;
 
 -- Return the account id a given (market_id, asset_id, owner).
 -- @query get_account_id(market_id: i64, asset_id: i64, owner: str) ->? i64

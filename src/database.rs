@@ -422,7 +422,7 @@ pub fn migrate_schema_from_1_to_2(tx: &mut Transaction) -> Result<()> {
 
 pub fn get_schema_version(tx: &mut Transaction) -> Result<i64> {
     let sql = r#"
-        select max(version) from schema_versions;
+        select coalesce(max(version), 0) from schema_versions;
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),

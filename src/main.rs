@@ -277,13 +277,40 @@ fn run_server(
 
 /// Ensure the schema exists, and populate initial markets from the config file.
 fn initialize_database(config: &DatabaseConfig, markets: &[MarketConfig]) -> db::Result<()> {
-    let raw_connection = sqlite::open(&config.path).expect("Failed to open database.");
+    let mut raw_connection = sqlite::open(&config.path).expect("Failed to open database.");
     let mut connection = connect_database(&raw_connection).expect("Failed to connect to database.");
     let mut tx = connection.begin()?;
     db::ensure_schema_versions_exists(&mut tx)?;
     match db::get_schema_version(&mut tx)? {
-        0 => db::create_schema(&mut tx)?,
-        1 => db::migrate_schema_from_1_to_2(&mut tx)?,
+        0 => match db::create_schema(&mut tx) {
+            Ok(()) => { /* Ok, as expected. */ }
+            Err(err) => match err.message {
+                Some(msg) if msg.contains("table accounts already exists") => {
+                    // Probably the database was at schema version 1, but we never
+                    // recorded that in version 0.1.0, let's try updating instead.
+                    // TODO: This can be removed some time after v0.2.0.
+                    std::mem::drop(tx);
+                    std::mem::drop(connection);
+                    std::mem::drop(raw_connection);
+                    raw_connection = sqlite::open(&config.path).expect("Failed to open database.");
+                    connection =
+                        connect_database(&raw_connection).expect("Failed to connect to database.");
+                    tx = connection.begin()?;
+                    db::ensure_schema_versions_exists(&mut tx)?;
+                    db::migrate_schema_from_1_to_2(&mut tx)?;
+                    tx.commit()?;
+                    println!("Updated database schema from version 1 to 2.");
+                    tx = connection.begin()?;
+                }
+                _ => return Err(err),
+            },
+        },
+        1 => {
+            db::migrate_schema_from_1_to_2(&mut tx)?;
+            tx.commit()?;
+            println!("Updated database schema from version 1 to 2.");
+            tx = connection.begin()?;
+        }
         2 => { /* Ok, as expected. */ }
         n => panic!("Database schema version {n} is newer than supported."),
     }
