@@ -102,8 +102,8 @@ pub fn handle_index(tx: &mut db::Transaction, ctx: &Context) -> db::Result<Respo
         markets.push(model::get_market_by_slug(tx, &slug)?.expect("We know the market exists."));
     }
 
-    // Order markets by descending liquidity.
-    markets.sort_by_key(|m| std::cmp::Reverse(m.total_deposited()));
+    // Order markets by ranking score.
+    markets.sort_by_key(|m| m.index_rank());
 
     let body = view_index(ctx, &markets);
     Ok(respond_html(body))

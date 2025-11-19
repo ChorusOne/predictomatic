@@ -9,6 +9,7 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::time::Duration;
 
 use crate::config::{AppConfig, MarketConfig, MarketKind};
 use crate::database::{self as db, Transaction};
@@ -369,6 +370,7 @@ pub struct Market {
     pub slug: String,
     pub title: String,
     pub description: String,
+    pub age: Duration,
     pub outcomes: Vec<Outcome>,
 
     /// For every owner, their balance for this market.
@@ -409,6 +411,20 @@ impl Market {
         }
 
         sum
+    }
+
+    /// Return a popularity ranking score for the index page.
+    ///
+    /// The popularity score works similar to the popularity ranking in Reddit:
+    /// age - log(upvotes). For markets, instead of upvotes we take liquidity,
+    /// and we don't bother with the log at this point. So we order markets by
+    /// age, but with a discount for liquidity.
+    ///
+    /// A lower number means the market should be displayed earlier.
+    pub fn index_rank(&self) -> i64 {
+        // This constant is tuned by hand, for now this works well enough.
+        let micros_per_sec = 200;
+        self.age.as_secs() as i64 - (self.total_deposited().0 / micros_per_sec)
     }
 
     /// Return the probability distribution over outcomes implied by the AMM pool balances.
@@ -527,6 +543,7 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
         slug: market.slug,
         title: market.title,
         description: market.description,
+        age: Duration::from_secs(market.age_seconds as u64),
         outcomes,
         balances,
         profits,

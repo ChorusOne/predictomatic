@@ -172,6 +172,7 @@ select
   , kind        -- :str
   , title       -- :str
   , description -- :str
+  , unixepoch() - unixepoch(created_at) as age_seconds -- :i64
 from
   markets
 where
