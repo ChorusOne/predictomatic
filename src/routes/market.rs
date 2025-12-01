@@ -35,7 +35,7 @@ pub fn view_market_stats(market: &Market, implied_probabilities: &[f64]) -> Mark
     html! {
         table {
             tr {
-                td { "Liquidity" }
+                td title="Total deposited excluding the system user" { "Liquidity" }
                 td .num { (format!("$\u{200a}{liquidity:.2}")) }
             }
             @for (oc, p) in market.outcomes.iter().zip(implied_probabilities) {
