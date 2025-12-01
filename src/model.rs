@@ -431,10 +431,15 @@ impl Market {
     /// age, but with a discount for liquidity.
     ///
     /// A lower number means the market should be displayed earlier.
-    pub fn index_rank(&self) -> i64 {
+    pub fn index_rank(&self) -> (i64, i64) {
         // This constant is tuned by hand, for now this works well enough.
-        let micros_per_sec = 200;
-        self.age.as_secs() as i64 - (self.total_deposited_excluding_system().0 / micros_per_sec)
+        let micros_per_sec = 100;
+
+        let rank = self.age.as_secs() as i64
+            - (self.total_deposited_excluding_system().0 / micros_per_sec);
+
+        // Order all open markets before all closed markets.
+        if self.is_open() { (0, rank) } else { (1, rank) }
     }
 
     /// Return the probability distribution over outcomes implied by the AMM pool balances.
