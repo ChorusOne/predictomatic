@@ -392,8 +392,14 @@ impl Market {
         self.outcomes.iter().find(|oc| oc.is_resolution)
     }
 
-    /// Return the amount of points deposited into this market.
-    pub fn total_deposited(&self) -> Amount {
+    /// Return the amount of points deposited into this market by non-system users.
+    ///
+    /// We exclude liquidity from the SYSTEM user, because that one is based on
+    /// configuration when the market was created, and it would offset the
+    /// liquidity value without changing anything in practice. As long as the
+    /// SYSTEM liquidity is enough that people can trade, any liquidity on top
+    /// of that does not contribute in any way.
+    pub fn total_deposited_excluding_system(&self) -> Amount {
         let mut sum = AssetId::POINTS.zero();
 
         if !self.profits.is_empty() {
@@ -402,11 +408,15 @@ impl Market {
             // still like to show the liquidity at the time it resolved, which
             // we have from the realized profits.
             for rp in &self.profits {
-                sum = sum + rp.amount_in;
+                if rp.owner != "SYSTEM" {
+                    sum = sum + rp.amount_in;
+                }
             }
         } else {
-            for b in self.balances.values() {
-                sum = sum + b.points;
+            for (owner, b) in self.balances.iter() {
+                if owner != "SYSTEM" {
+                    sum = sum + b.points;
+                }
             }
         }
 
@@ -424,7 +434,7 @@ impl Market {
     pub fn index_rank(&self) -> i64 {
         // This constant is tuned by hand, for now this works well enough.
         let micros_per_sec = 200;
-        self.age.as_secs() as i64 - (self.total_deposited().0 / micros_per_sec)
+        self.age.as_secs() as i64 - (self.total_deposited_excluding_system().0 / micros_per_sec)
     }
 
     /// Return the probability distribution over outcomes implied by the AMM pool balances.

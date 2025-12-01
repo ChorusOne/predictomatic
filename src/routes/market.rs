@@ -31,7 +31,7 @@ struct MarketPosition<'a> {
 }
 
 pub fn view_market_stats(market: &Market, implied_probabilities: &[f64]) -> Markup {
-    let liquidity = market.total_deposited();
+    let liquidity = market.total_deposited_excluding_system();
     html! {
         table {
             tr {
