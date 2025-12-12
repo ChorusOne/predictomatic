@@ -433,7 +433,7 @@ impl Market {
     /// A lower number means the market should be displayed earlier.
     pub fn index_rank(&self) -> (i64, i64) {
         // This constant is tuned by hand, for now this works well enough.
-        let micros_per_sec = 100;
+        let micros_per_sec = 60;
 
         let rank = self.age.as_secs() as i64
             - (self.total_deposited_excluding_system().0 / micros_per_sec);
