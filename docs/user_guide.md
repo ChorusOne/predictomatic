@@ -88,6 +88,9 @@ Odds of 10:5 mean a probability of 10/15,
 so about 67% probability that ‘Yes’ will happen,
 and 33% that ‘No’ will happen.
 In other words, the average price you paid was $0.67 per Yes share.
+When you move the slider to trade,
+the trade offer displays this average price in points for your convenience,
+even though only outcome shares change hands.
 
 ## Automated market maker
 
