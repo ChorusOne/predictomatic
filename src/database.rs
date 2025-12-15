@@ -178,14 +178,34 @@ pub fn create_schema(tx: &mut Transaction) -> Result<()> {
 
     let sql = r#"
         create table transfers
-        ( id                 integer primary key
-        , event_id           integer not null references events (id)
-        , from_account_id    integer not null references accounts (id)
-        , to_account_id      integer not null references accounts (id)
-        , amount             integer not null
-        , from_balance_after integer not null
-        , to_balance_after   integer not null
+        ( id              integer primary key
+        , event_id        integer not null references events (id)
+        , from_account_id integer not null references accounts (id)
+        , to_account_id   integer not null references accounts (id)
+        , amount          integer not null
         , check (amount > 0)
+        );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'create_schema' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        -- Records the balance of an account after an event affected the account.
+        -- Multiple transfers may be part of the same event, this table only records
+        -- the final balance after all transfers that are part of the event.
+        create table balances
+        ( id            integer primary key
+        , account_id    integer not null references accounts (id)
+        , event_id      integer not null references events (id)
+        , balance_after integer not null
+        , unique (account_id, event_id)
         );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
@@ -304,7 +324,13 @@ pub fn migrate_schema_from_1_to_2(tx: &mut Transaction) -> Result<()> {
     }
 
     let sql = r#"
-        alter table transfers rename to transfers_v1;
+        create table balances
+        ( id            integer primary key
+        , account_id    integer not null references accounts (id)
+        , event_id      integer not null references events (id)
+        , balance_after integer not null
+        , unique (account_id, event_id)
+        );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),
@@ -317,96 +343,36 @@ pub fn migrate_schema_from_1_to_2(tx: &mut Transaction) -> Result<()> {
     }
 
     let sql = r#"
-        create table transfers
-          ( id                 integer primary key
-          , event_id           integer not null references events (id)
-          , from_account_id    integer not null references accounts (id)
-          , to_account_id      integer not null references accounts (id)
-          , amount             integer not null
-          , from_balance_after integer not null
-          , to_balance_after   integer not null
-          , check (amount > 0)
-          );
-        "#;
-    let statement = match tx.statements.entry(sql.as_ptr()) {
-        Occupied(entry) => entry.into_mut(),
-        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
-    };
-    statement.reset()?;
-    match statement.next()? {
-        Row => panic!("Query 'migrate_schema_from_1_to_2' unexpectedly returned a row."),
-        Done => {}
-    }
-
-    let sql = r#"
-        with
-        balance_from_after (transfer_id, from_account_id, balance_after) as (
-          select
-            t1.id as transfer_id,
-            t1.from_account_id as from_account_id,
-            coalesce((
-              select sum(t2.amount) from transfers_v1 t2
-              where (t2.id < t1.id) and (t1.from_account_id = t2.to_account_id)
-            ), 0) - coalesce((
-              select sum(t2.amount) from transfers_v1 t2
-              where (t2.id < t1.id) and (t1.from_account_id = t2.from_account_id)
-            ), 0) - t1.amount
-          from
-            transfers_v1 t1
-        ),
-        
-        balance_to_after (transfer_id, to_account_id, balance_after) as (
-          select
-            t1.id as transfer_id,
-            t1.to_account_id as to_account_id,
-            coalesce((
-              select sum(t2.amount) from transfers_v1 t2
-              where (t2.id < t1.id) and (t1.to_account_id = t2.to_account_id)
-            ), 0) - coalesce((
-              select sum(t2.amount) from transfers_v1 t2
-              where (t2.id < t1.id) and (t1.to_account_id = t2.from_account_id)
-            ), 0) + t1.amount
-          from
-            transfers_v1 t1
-        )
-        
-        insert into transfers
-          ( id
+        insert into balances
+          ( account_id
           , event_id
-          , from_account_id
-          , to_account_id
-          , amount
-          , from_balance_after
-          , to_balance_after
+          , balance_after
           )
         select
-          t1.id,
-          t1.event_id,
-          t1.from_account_id,
-          t1.to_account_id,
-          t1.amount,
-          balance_from_after.balance_after as from_balance_after,
-          balance_to_after.balance_after as to_balance_after
+          accounts.id as account_id,
+          events.id as event_id,
+          coalesce((
+            select sum(amount) from transfers
+            where (transfers.event_id <= events.id) and (accounts.id = transfers.to_account_id)
+          ), 0) - coalesce((
+            select sum(amount) from transfers
+            where (transfers.event_id <= events.id) and (accounts.id = transfers.from_account_id)
+          ), 0)
         from
-          transfers_v1 t1,
-          balance_from_after,
-          balance_to_after
-        where true
-          and (t1.id = balance_from_after.transfer_id)
-          and (t1.id = balance_to_after.transfer_id);
-        "#;
-    let statement = match tx.statements.entry(sql.as_ptr()) {
-        Occupied(entry) => entry.into_mut(),
-        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
-    };
-    statement.reset()?;
-    match statement.next()? {
-        Row => panic!("Query 'migrate_schema_from_1_to_2' unexpectedly returned a row."),
-        Done => {}
-    }
-
-    let sql = r#"
-        drop table transfers_v1;
+          events,
+          accounts
+        where
+          exists (
+            select 1 from transfers where
+              (events.id = transfers.event_id)
+              and (
+                  (accounts.id = transfers.from_account_id) or
+                  (accounts.id = transfers.to_account_id)
+              )
+          )
+        order by
+          event_id asc,
+          account_id asc;
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),
@@ -578,6 +544,34 @@ pub fn create_transfer(
     amount: i64,
 ) -> Result<()> {
     let sql = r#"
+        insert into transfers
+          ( event_id
+          , from_account_id
+          , to_account_id
+          , amount
+          )
+          values
+          ( :event_id
+          , :from_account_id
+          , :to_account_id
+          , :amount
+          );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, event_id)?;
+    statement.bind(2, from_account_id)?;
+    statement.bind(3, to_account_id)?;
+    statement.bind(4, amount)?;
+    match statement.next()? {
+        Row => panic!("Query 'create_transfer' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
         update accounts
           set   balance = balance - :amount
           where id = :from_account_id;
@@ -612,22 +606,25 @@ pub fn create_transfer(
     }
 
     let sql = r#"
-        insert into transfers
+        insert into
+          balances
           ( event_id
-          , from_account_id
-          , to_account_id
-          , amount
-          , from_balance_after
-          , to_balance_after
+          , account_id
+          , balance_after
           )
-          values
+        values
           ( :event_id
           , :from_account_id
-          , :to_account_id
-          , :amount
           , (select balance from accounts where id = :from_account_id)
+          ),
+          ( :event_id
+          , :to_account_id
           , (select balance from accounts where id = :to_account_id)
-          );
+          )
+        on conflict
+          -- Overwrite a previous balance for this event, if any.
+          -- We care only about the final balance per event.
+          do update set balance_after = excluded.balance_after;
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),
@@ -637,7 +634,6 @@ pub fn create_transfer(
     statement.bind(1, event_id)?;
     statement.bind(2, from_account_id)?;
     statement.bind(3, to_account_id)?;
-    statement.bind(4, amount)?;
     let result = match statement.next()? {
         Row => panic!("Query 'create_transfer' unexpectedly returned a row."),
         Done => (),
