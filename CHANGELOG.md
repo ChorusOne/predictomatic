@@ -2,7 +2,6 @@
 
 For users:
 
- * Clarify the percentages on the index page by adding the outcome label.
  * Improve the sort order on the index page to surface interesting markets first.
  * Exclude the system user from liquidity computations.
  * Clarify the manual.
@@ -14,7 +13,7 @@ For admins:
 Internal changes:
 
  * Store new account balances at every transfer. This is in preparation for
-   graphing a prediction over time. Related to this,
+   graphing a prediction over time.
 
 ## v0.1.0
 
