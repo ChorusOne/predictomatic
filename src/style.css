@@ -383,7 +383,9 @@ tr.system td.owner {
 .market .summary {
     margin-top: 1rem;
     display: grid;
-    height: 5.2rem;
+    /* Square would be 5.2x5.2, but somehow that does not look visually square,
+     * we make it slightly taller to make it appear square. */
+    height: 5.3rem;
     grid-template-columns: 5.2rem 1.1rem auto 1fr;
     grid-template-areas: 'teaser _1 stats _2';
 }
@@ -395,7 +397,9 @@ tr.system td.owner {
     text-align: center;
     font-weight: 400;
     display: grid;
-    grid-template-rows: 1.2rem 2.1rem 1fr;
+    /* If we make the space above and below symmetric, it doesn't look visually
+     * centered; leave a bit more space above to make it _appear_ centered. */
+    grid-template-rows: 1.1fr 2.1rem 1fr;
     grid-template-areas: 'above' 'big' 'below';
 }
 
@@ -403,6 +407,7 @@ tr.system td.owner {
     background-color: var(--fg);
     color: var(--bg);
     font-weight: 500;
+    grid-template-rows: 2.2rem 2.1rem 1fr;
 }
 
 .market .summary .teaser .big {
@@ -411,10 +416,17 @@ tr.system td.owner {
     line-height: 2rem;
 }
 
-.market .summary .below {
+.market .summary .teaser .long-label {
+    /* If the name of the outcome is longer than "Yes" or "No",
+     * reduce the font size so it fits. */
+    font-size: 1.2rem;
+}
+
+.market .summary .above {
+    padding-top: 1.05rem;
     line-height: 0.9rem;
     font-size: 0.85rem;
-    grid-area: below;
+    grid-area: above;
 }
 
 .market .summary table {

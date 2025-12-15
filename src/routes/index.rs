@@ -21,7 +21,6 @@ fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
         None => html! {
             div .teaser {
                 span .big { (format!("{:.0}%", ps[0] * 100.0)) }
-                span .below { (market.outcomes[0].value) }
             }
         },
         Some(outcome) => html! {
@@ -29,8 +28,8 @@ fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
                 .teaser .resolved
                 title=(format!("Resolved as {}.", outcome.value))
             {
-                span .big { (outcome.value) }
-                span .below { "Resolved" }
+                span .above { "resolved" }
+                span .big .long-label[outcome.value.len() > 3]{ (outcome.value) }
             }
         },
     };
