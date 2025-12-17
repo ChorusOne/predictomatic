@@ -386,8 +386,9 @@ tr.system td.owner {
     /* Square would be 5.2x5.2, but somehow that does not look visually square,
      * we make it slightly taller to make it appear square. */
     height: 5.3rem;
-    grid-template-columns: 5.2rem 1.1rem auto 1fr;
-    grid-template-areas: 'teaser _1 stats _2';
+    column-gap: 1.1rem;
+    grid-template-columns: 5.2rem auto 1fr;
+    grid-template-areas: 'teaser stats _1';
 }
 
 .market .summary .teaser {
