@@ -1,5 +1,7 @@
 ## v0.2.0
 
+Released 2025-12-18.
+
 For users:
 
  * Improve the sort order on the index page to surface interesting markets first.
@@ -16,5 +18,7 @@ Internal changes:
    graphing a prediction over time.
 
 ## v0.1.0
+
+Released 2025-10-20.
 
 Initial release.
