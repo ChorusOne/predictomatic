@@ -11,12 +11,12 @@ const invariant = systemBalance
 
 // The maximum probability for outcome 0, is when we'd sell all user shares
 // to the pool.
-const max0 = systemBalance[0] + userBalance[0];
+const max0 = systemBalance[0] + userBalance[0] + userLiquidPoints;
 const pMin = Math.exp(-max0 / marketB) / invariant;
 
 // Same for outcome 1, and for a binary question, that gives us the maximum
 // probability we can afford to buy.
-const max1 = systemBalance[1] + userBalance[1];
+const max1 = systemBalance[1] + userBalance[1] + userLiquidPoints;
 const pMax = 1.0 - Math.exp(-max1 / marketB) / invariant;
 
 const canTrade = pMax - pMin > 0.001;
@@ -84,27 +84,50 @@ function getTrade(p) {
     // That case happens when the slider is at the market probability, so then
     // we still have a price: the current market price.
     const sharePricePoints = trade.valid ? (1.0 / (ratio + 1.0)) : p;
-    const costPoints = amountBuy * sharePricePoints;
+
+    // The `amountBuy` and `amountSell` so far are against the system. If the
+    // user does not have enough shares to sell, we need to make an additional
+    // deposit. From the deposit we get both outcome shares, so in a sense we
+    // "bought" more. Also, we don't want to double-count this deposit as shares
+    // "sold". So adjust for deposit to get an "effective" amount bought/sold.
+    const deposit = Math.max(amountSell - userBalance[trade.assetSell], 0.0);
+    const effectiveBuy = amountBuy + deposit;
+    const effectiveSell = amountSell - deposit;
+    const costPointsBuy = effectiveBuy * sharePricePoints;
+    const costPointsSell = effectiveSell * (1.0 - sharePricePoints);
+
+    var sellRow = effectiveSell === 0.0 ? "" : `
+    <tr>
+        <td>Sell</td>
+        <td class="num amount">$\u{200a}${costPointsSell.toFixed(2)}</td>
+        <td class="at">worth of</td>
+        <td class="outcome-label">${labelSell},</td>
+        <td class="num amount">${effectiveSell.toFixed(2)}</td>
+        <td class="at">shares at</td>
+        <td class="num price">$\u{200a}${(1.0 - sharePricePoints).toFixed(2)} per share</td>
+    </tr>
+    `;
+
+    var depositRow = deposit === 0.0 ? "" : `
+    <tr>
+      <td>Lock</td>
+      <td class="num amount">$\u{200a}${deposit.toFixed(2)}</td>
+      <td colspan="5"> up in this market until resolution</td>
+    </tr>
+    `;
 
     offerTable.innerHTML = `
     <tr>
         <td>Buy</td>
-        <td class="num amount strong">$\u{200a}${costPoints.toFixed(2)}</td>
+        <td class="num amount strong">$\u{200a}${costPointsBuy.toFixed(2)}</td>
         <td class="at">worth of</td>
         <td class="outcome-label"><strong>${labelBuy}</strong>,</td>
-        <td class="num amount">${amountBuy.toFixed(2)}</td>
+        <td class="num amount">${effectiveBuy.toFixed(2)}</td>
         <td class="at">shares at</td>
         <td class="num price"><strong>$\u{200a}${sharePricePoints.toFixed(2)}</strong> per share</td>
     </tr>
-    <tr>
-        <td>Sell</td>
-        <td class="num amount">$\u{200a}${costPoints.toFixed(2)}</td>
-        <td class="at">worth of</td>
-        <td class="outcome-label">${labelSell},</td>
-        <td class="num amount">${amountSell.toFixed(2)}</td>
-        <td class="at">shares at</td>
-        <td class="num price">$\u{200a}${(1.0 - sharePricePoints).toFixed(2)} per share</td>
-    </tr>
+    ${sellRow}
+    ${depositRow}
     `;
 
     if (trade.valid) {

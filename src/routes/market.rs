@@ -155,30 +155,24 @@ fn view_prediction_binary(
             span .knob .disabled {}
         }
         noscript { "You need to enable Javascript to trade." }
-        @if user_position.is_some() {
-            div #trade-offer {
-                h3 { "Trade offer" }
-                // The JS replaces the contents of the table when dragging the slider.
-                div {
-                    table {
-                        tr {
-                            td {
-                                "Move the slider to receive a trade offer."
-                            }
+        div #trade-offer {
+            h3 { "Trade" }
+            // The JS replaces the contents of the table when dragging the slider.
+            div {
+                table {
+                    tr {
+                        td {
+                            "Move the slider to trade."
                         }
                     }
-                    form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
-                        input type="hidden" name="amount_in" value="0";
-                        input type="hidden" name="min_out" value="0";
-                        input type="hidden" name="asset_in" value="0";
-                        input type="hidden" name="asset_out" value="0";
-                        button #trade-submit type="submit" disabled { "Trade" }
-                    }
                 }
-            }
-        } @else {
-            p {
-                "To start trading, deposit some funds on the right."
+                form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
+                    input type="hidden" name="amount_in" value="0";
+                    input type="hidden" name="min_out" value="0";
+                    input type="hidden" name="asset_in" value="0";
+                    input type="hidden" name="asset_out" value="0";
+                    button #trade-submit type="submit" disabled { "Trade" }
+                }
             }
         }
     }
