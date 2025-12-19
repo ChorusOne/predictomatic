@@ -317,21 +317,15 @@ aside form label input {
 #trade-offer form { grid-area: form; }
 #trade-offer table { grid-area: table; }
 
-#trade-offer td.amount, #trade-offer td.outcome-label {
-    padding-left: 1ex;
+#trade-offer td {
+    padding-left: 0.9ex;
 }
-
-#trade-offer td.at, #trade-offer td.price {
-    padding-left: 1.6ex;
-    text-align: left;
+#trade-offer td:first-child {
+    padding-left: 0;
 }
 
 #trade-offer td.amount {
     min-width: 3.2rem;
-}
-
-#trade-offer span {
-    padding-right: 0.1em;
 }
 
 td.strong, strong {

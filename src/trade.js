@@ -83,27 +83,27 @@ function getTrade(p) {
     // probability. However, when both amounts are 0, the ratio does not exist.
     // That case happens when the slider is at the market probability, so then
     // we still have a price: the current market price.
-    const costPoints = trade.valid ? (1.0 / (ratio + 1.0)) : p;
-
-    // Usually it's sufficient to quote the price in cents, you're not going
-    // to care about the difference between a 67% and 68% probability. But
-    // at the extreme prices, it may start to matter, so add a decimal there.
-    const costPrecision = costPoints > 0.90 || costPoints < 0.10 ? 3 : 2;
+    const sharePricePoints = trade.valid ? (1.0 / (ratio + 1.0)) : p;
+    const costPoints = amountBuy * sharePricePoints;
 
     offerTable.innerHTML = `
     <tr>
-        <td>You receive</td>
-        <td class="num amount strong">${amountBuy.toFixed(2)}</td>
-        <td class="outcome-label strong">${labelBuy}</td>
-        <td class="at">at</td>
-        <td class="num price"><strong>$\u{200a}${costPoints.toFixed(costPrecision)}</strong> per share</td>
+        <td>Buy</td>
+        <td class="num amount strong">$\u{200a}${costPoints.toFixed(2)}</td>
+        <td class="at">worth of</td>
+        <td class="outcome-label"><strong>${labelBuy}</strong>,</td>
+        <td class="num amount">${amountBuy.toFixed(2)}</td>
+        <td class="at">shares at</td>
+        <td class="num price"><strong>$\u{200a}${sharePricePoints.toFixed(2)}</strong> per share</td>
     </tr>
     <tr>
-        <td>You pay</td>
+        <td>Sell</td>
+        <td class="num amount">$\u{200a}${costPoints.toFixed(2)}</td>
+        <td class="at">worth of</td>
+        <td class="outcome-label">${labelSell},</td>
         <td class="num amount">${amountSell.toFixed(2)}</td>
-        <td class="outcome-label">${labelSell}</td>
-        <td class="at">at</td>
-        <td class="num price">$\u{200a}${(1.0 - costPoints).toFixed(costPrecision)} per share</td>
+        <td class="at">shares at</td>
+        <td class="num price">$\u{200a}${(1.0 - sharePricePoints).toFixed(2)} per share</td>
     </tr>
     `;
 
