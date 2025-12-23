@@ -31,9 +31,9 @@ In practice, we don’t have an infinite amount of points to spend. Even if we c
 afford to buy $x$ shares such that $p(x) = q$, it would be unwise to risk our
 entire wealth $W$.
 
-## Applying the Gambling Formula
+## Applying the formula
 
-The simple formulation of the Kelly Criterion, the gambling formula, says:
+The simple formulation of the Kelly Criterion, the gambling formula, states:
 
 $$ f^* = q - \frac{1 - q}{b} $$
 
@@ -49,3 +49,63 @@ $$ f^* = q - \frac{1 - q}{1 / \bar{p}(x) - 1.0} $$
 
 where $\bar{p}(x) = C(x) / x$ is the average price per share.
 
+## Maximizing log wealth
+
+Where does the above formula come from? It’s the solution for a simplified case
+to the general Kelly principle: maximize expected log wealth. Note that this is
+not the same as maximizing the log of the expected wealth! (Which would be the
+same as maximizing expected wealth, because log is monotonic.) Because
+$\textup{log}(x)$ decreases rapidly as $x \to 0$, maximizing log wealth heavily
+penalizes outcomes where we’d lose all our wealth. It values staying solvent
+over recklessly maximizing wealth.
+
+Framed this way, with our starting wealth $W$, we want to maximize:
+
+$$ L(x) = \mathbb{E}(\textup{log} W_1) $$
+
+where $W_1$ is the wealth after our bet. There are two scenarios:
+
+ * If the outcome happens, $W_1 = W - C(x) + x$.
+ * If the outcome does not happen, $W_1 = W - C(x)$.
+
+The former happens with probability $q$, the latter with probability $1 - q$.
+In both cases we spend $C(x)$ to buy $x$ shares. In the positive outcome, each
+share pays out $1$ for a total of $x$, in the negative outcome we get nothing.
+In other words, we need to maximixe:
+
+$$ L(x) = q \textup{log}(W - C(x) + x) + (1 - q)\textup{log}(W - C(x)) $$
+
+We maximize this by setting the $dL/dx$ equal to $0$. Recall that $dC/dx = p$,
+so we get:
+
+$$ L'(x) = q \frac{1 - p(x)}{W - C(x) + x} - (1 - q)\frac{p(x)}{W - C(x)} = 0 $$
+
+Rearranging the terms, we get:
+
+$$ \frac{p(x)}{1 - p(x)} = {q}{1 - q} \cdot \frac{W - C(x)}{W - C(x) + x} $$
+
+We can draw a few interesting conclusions from this:
+
+**Infinite wealth limit.**<br>
+Say $W >> x$, then:
+
+```math
+\frac{W - C(x)}{W - C(x) + x} \approx 1
+\implies \frac{p(x)}{1 - p(x)} \approx \frac{q}{1 - q}
+\implies p(x) \approx q
+```
+
+In other words, if the bet is small compared to our wealth, we should buy until
+the marginal price matches $q$. This is the case where we can forget about
+Kelly, and we’re just maximizing expected wealth. Keep buying the shares while
+they are undervalued.
+
+**Finite wealth limit.**<br>
+When the above approximation does not apply, we have:
+
+```math
+\frac{W - C(x)}{W - C(x) + x} < 1
+\implies \frac{p(x)}{1 - p(x)} < \frac{q}{1 - q}
+```
+
+So we should stop buying shares _before_ $p(x)$ reaches $q$.
