@@ -82,7 +82,7 @@ $$ L'(x) = q \frac{1 - p(x)}{W - C(x) + x} - (1 - q)\frac{p(x)}{W - C(x)} = 0 $$
 
 Rearranging the terms, we get:
 
-$$ \frac{p(x)}{1 - p(x)} = {q}{1 - q} \cdot \frac{W - C(x)}{W - C(x) + x} $$
+$$ \frac{p(x)}{1 - p(x)} = \frac{q}{1 - q} \cdot \frac{W - C(x)}{W - C(x) + x} $$
 
 We can draw a few interesting conclusions from this:
 
@@ -109,3 +109,17 @@ When the above approximation does not apply, we have:
 ```
 
 So we should stop buying shares _before_ $p(x)$ reaches $q$.
+
+To solve this for $p(x)$,
+let’s simplify the notation a bit.
+We’ll write $p$ for $p(x)$ and $W$ for $W - C(x)$.
+Then we have:
+
+```math
+\frac{p}{1 - p} = \frac{q}{1 - q} \cdot \frac{W}{W + x} \\
+\implies p = \frac{(1 - p)qW}{(1 - q)(W + x)} \\
+\implies p(1 - q)(W + x) = (1 - p)qW \\
+\implies p(qW + (1 - q)(W + x)) = qW \\
+\implies p = \frac{qW}{qW + (1 - q)(W + x)} \\
+\implies p = \frac{qW}{W + (1 - q)x}
+```
