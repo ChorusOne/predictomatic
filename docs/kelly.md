@@ -123,3 +123,7 @@ Then we have:
 \implies p = \frac{qW}{qW + (1 - q)(W + x)} \\
 \implies p = \frac{qW}{W + (1 - q)x}
 ```
+
+Note how in the case $W \to \infty$ we again recover $p = q$. There is not much
+point in solving it for $p(x)$ though because the right-hand side depends on $x$
+and $C(x)$. We need to solve for $x$ ...
