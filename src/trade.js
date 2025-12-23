@@ -26,6 +26,16 @@ function getProbability(balance) {
     return ps[0] / invariant;
 }
 
+// Return the fraction of the bankroll to wager according to the Kelly Criterion.
+//
+// `p` is the probability of the outcome (after the trade).
+// `pricePerShare` is the average price in points we pay per outcome share.
+function getKellyFraction(p, pricePerShare) {
+    // return p - (1.0 - p) * (cost / (nShares - cost));
+    // return p - (1.0 - p) / (nShares/cost - 1);
+    return p - (1.0 - p) / ((1.0 / pricePerShare) - 1.0);
+}
+
 // Prepare a trade offer, such that after the trade, the market's implied
 // probability is `p`.
 function getTrade(p) {
@@ -95,6 +105,13 @@ function getTrade(p) {
     const effectiveSell = amountSell - deposit;
     const costPointsBuy = effectiveBuy * sharePricePoints;
     const costPointsSell = effectiveSell * (1.0 - sharePricePoints);
+
+    console.log(`
+        p after: ${p}
+        Kelly p before: ${getKellyFraction(getProbability(systemBalance), sharePricePoints)}
+        Kelly p avg:    ${getKellyFraction(sharePricePoints, sharePricePoints)}
+        Kelly p after:  ${getKellyFraction(trade.assetBuy === 0 ? p : 1.0 - p, sharePricePoints)}`
+    );
 
     var sellRow = effectiveSell === 0.0 ? "" : `
     <tr>
