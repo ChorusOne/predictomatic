@@ -312,19 +312,8 @@ function initializeSlider() {
     window.addEventListener("resize", onResize);
 }
 
-function initializeDepositForm() {
-    const input = document.getElementById("input-deposit-amount");
-    const button = document.getElementById("button-deposit");
-    input.addEventListener("input", (event) => {
-        const n = Number(input.value.replace("$", ""));
-        const isValid = Number.isFinite(n) && n > 0.0 && n <= userLiquidPoints;
-        button.disabled = !isValid;
-    });
-}
-
 function initialize() {
     initializeSlider();
-    initializeDepositForm();
 }
 
 document.addEventListener("DOMContentLoaded", initialize);

@@ -197,23 +197,6 @@ fn view_market_admin(ctx: &Context, market: &Market) -> Markup {
     }
 }
 
-fn view_market_deposit_aside(ctx: &Context, market: &Market) -> Markup {
-    let default_deposit = AssetId::POINTS.micros(10_000_000).min(ctx.user_points);
-    html! {
-        h3 { "Deposit" }
-        form method="post" action=(ctx.market_url(market, "/deposit")) {
-            label {
-                "Amount "
-                input
-                    #input-deposit-amount
-                    name="amount"
-                    value=(format!("${default_deposit:.2}"));
-            }
-            button #button-deposit type="submit" { "Deposit" }
-        }
-    }
-}
-
 fn view_market(ctx: &Context, market: &Market) -> Markup {
     let dist = market.implied_distribution();
     let ps = dist.ps();
@@ -296,10 +279,6 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                         Some(pos) => (view_market_position_aside(market, pos)),
                         None if market.is_open() => { "You are not participating." }
                         None => { "You did not participate." }
-                    }
-
-                    @if market.is_open() {
-                        (view_market_deposit_aside(ctx, market))
                     }
 
                     @if ctx.is_admin && market.is_open() {
