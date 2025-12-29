@@ -26,14 +26,78 @@ function getProbability(balance) {
     return ps[0] / invariant;
 }
 
-// Return the fraction of the bankroll to wager according to the Kelly Criterion.
+// Return the expected log wealth if we trade up to marginal probability `p`,
+// but we believe the true probability of outcome 0 is `q`.
 //
-// `p` is the probability of the outcome (after the trade).
-// `pricePerShare` is the average price in points we pay per outcome share.
-function getKellyFraction(p, pricePerShare) {
-    // return p - (1.0 - p) * (cost / (nShares - cost));
-    // return p - (1.0 - p) / (nShares/cost - 1);
-    return p - (1.0 - p) / ((1.0 / pricePerShare) - 1.0);
+// Returns NaN for cases where we can't afford the trade, because the wealths
+// would be negative, so log(wealth) does not exist.
+function expectedLogWealth(p, q) {
+    // If we trade up to `p`, d0, d1 are the shares that change hands.
+    const new0 = -Math.log(invariant * p) * marketB;
+    const new1 = -Math.log(invariant * (1.0 - p)) * marketB;
+    const d0 = new0 - systemBalance[0];
+    const d1 = new1 - systemBalance[1];
+
+    // So these are our new balances, if we allow them to go negative.
+    const b0a = userBalance[0] - d0;
+    const b1a = userBalance[1] - d1;
+
+    // Share balances can't go negative though, so we may need to deposit.
+    const deposit = Math.min(b0a, b1a, 0.0);
+    const b0 = b0a + deposit;
+    const b1 = b1a + deposit;
+    const bp = userLiquidPoints - deposit;
+
+    // From those we can get the log wealth for both outcomes.
+    const lw0 = Math.log(bp + b0);
+    const lw1 = Math.log(bp + b1);
+
+    return q * lw0 + (1.0 - q) * lw1;
+}
+
+// Given our true probability `q` for outcome 0, return the price `p` that we
+// should trade to to maximize our expected log wealth (the Kelly Criterion).
+function maximizeExpectedLogWealth(q) {
+    // Iterate performs one Newton-Raphson iteration to get closer to a root of
+    // the first derivative of `expectedLogWealth`. We estimate the first and
+    // second derivative numerically.
+    const iterate = p => {
+        const p0 = Math.max(p - 0.02, p * 0.5, pMin);
+        const p1 = Math.min(p + 0.02, (p + 1.0) * 0.5, pMax);
+        const ph = (p0 + p1) * 0.5;
+        const dp = (p1 - p0) * 0.5;
+
+        // Evaluate the log wealth at three points.
+        const lw0 = expectedLogWealth(p0, q);
+        const lwh = expectedLogWealth(ph, q);
+        const lw1 = expectedLogWealth(p1, q);
+
+        // The three points give us two derivatives, and those give us one
+        // second derivative.
+        const d0 = (lwh - lw0) / dp;
+        const d1 = (lw1 - lwh) / dp;
+        const dd = (d1 - d0) / dp;
+        const d = (d0 + d1) * 0.5;
+
+        // The standard formula has a step size of 1, but we know that the log
+        // wealth goes to zero at p=0 and p=1. If the optimum is at say p=0.97,
+        // then if we overshoot, we end up in this steep region of the graph
+        // where it takes a few iterations to recover. So when we get close to
+        // the edge, take smaller steps.
+        const stepsize = (p < 0.20 || p > 0.80) ? 0.33 : 1.0;
+
+        console.log(p, lwh);
+
+        return Math.max(pMin, Math.min(pMax, p - stepsize * (d / dd)));
+    };
+
+    // If the optimium is somewhere between 0.1 and 0.9, it converges very
+    // quickly, 5 iterations is plenty. But if the optimum is closer to the
+    // extremes, it converges more slowly. 15 iterations works either way.
+    let p = 0.5;
+    for (let i = 0; i < 15; i++) p = iterate(p);
+
+    return p;
 }
 
 // Prepare a trade offer, such that after the trade, the market's implied
@@ -106,12 +170,7 @@ function getTrade(p) {
     const costPointsBuy = effectiveBuy * sharePricePoints;
     const costPointsSell = effectiveSell * (1.0 - sharePricePoints);
 
-    console.log(`
-        p after: ${p}
-        Kelly p before: ${getKellyFraction(getProbability(systemBalance), sharePricePoints)}
-        Kelly p avg:    ${getKellyFraction(sharePricePoints, sharePricePoints)}
-        Kelly p after:  ${getKellyFraction(trade.assetBuy === 0 ? p : 1.0 - p, sharePricePoints)}`
-    );
+    maximizeExpectedLogWealth(p);
 
     var sellRow = effectiveSell === 0.0 ? "" : `
     <tr>
