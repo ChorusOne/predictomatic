@@ -356,13 +356,6 @@ td.strong, strong {
     max-height: 3.4rem;
 }
 
-#sizing-help {
-    margin-top: 1rem;
-    display: grid;
-    grid-auto-flow: column;
-    grid-column-gap: 1rem;
-}
-
 /* In participant tables, mark the current user with an arrow and a slightly
  * bolder line, so people can easily locate themselves. */
 tr.self {

@@ -174,20 +174,6 @@ fn view_prediction_binary(
                     button #trade-submit type="submit" disabled { "Trade" }
                 }
             }
-            h3 { "Bet sizing help" }
-            p {
-                "If the true probability of "
-                (market.outcomes[0].value)
-                " is "
-                (percentage)
-                ", the Kelly Criterion suggests trading to $0.50."
-            }
-            form id="sizing-help" {
-                button { "Select 50% Kelly" }
-                button { "Select 66% Kelly" }
-                button { "Select 100% Kelly" }
-                button { "Select neutral" }
-            }
         }
     }
 }
@@ -293,6 +279,37 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                         Some(pos) => (view_market_position_aside(market, pos)),
                         None if market.is_open() => { "You are not participating." }
                         None => { "You did not participate." }
+                    }
+
+                    @if market.is_open() {
+                        h3 { "Bet sizing help "}
+                        table #sizing-help {
+                            tr {
+                                td { "Belief " (market.outcomes[0].value) }
+                                td .num { "—%" }
+                            }
+                            tr {
+                                td { "50% Kelly" }
+                                td .num {
+                                    (market.outcomes[0].value)
+                                    " to $\u{200a}—"
+                                }
+                            }
+                            tr {
+                                td { "Full Kelly" }
+                                td .num {
+                                    (market.outcomes[0].value)
+                                    " to $\u{200a}—"
+                                }
+                            }
+                            tr {
+                                td { "Neutral" }
+                                td .num {
+                                    (market.outcomes[0].value)
+                                    " to $\u{200a}—"
+                                }
+                            }
+                        }
                     }
 
                     @if ctx.is_admin && market.is_open() {

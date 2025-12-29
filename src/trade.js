@@ -26,12 +26,8 @@ function getProbability(balance) {
     return ps[0] / invariant;
 }
 
-// Return the expected log wealth if we trade up to marginal probability `p`,
-// but we believe the true probability of outcome 0 is `q`.
-//
-// Returns NaN for cases where we can't afford the trade, because the wealths
-// would be negative, so log(wealth) does not exist.
-function expectedLogWealth(p, q) {
+// Return new balances and trade volume if we traded until probability `p`.
+function getTrade(p) {
     // If we trade up to `p`, d0, d1 are the shares that change hands.
     const new0 = -Math.log(invariant * p) * marketB;
     const new1 = -Math.log(invariant * (1.0 - p)) * marketB;
@@ -43,12 +39,63 @@ function expectedLogWealth(p, q) {
     const b1a = userBalance[1] - d1;
 
     // Share balances can't go negative though, so we may need to deposit.
-    const deposit = Math.min(b0a, b1a, 0.0);
+    const deposit = -Math.min(b0a, b1a, 0.0);
     const b0 = b0a + deposit;
     const b1 = b1a + deposit;
-    const bp = userLiquidPoints - deposit;
 
-    // From those we can get the log wealth for both outcomes.
+    return {
+        userDelta: [-d0, -d1],
+        userBalance: [b0, b1],
+        deposit: deposit,
+    };
+}
+
+function getTradeDetails(trade) {
+    if (trade.userDelta[0] > 0.01) {
+        return {
+            assetBuy: 0,
+            assetSell: 1,
+            amountBuy: trade.userDelta[0],
+            amountSell: -trade.userDelta[1],
+            valid: true,
+        };
+    }
+
+    if (trade.userDelta[1] > 0.01) {
+        return {
+            assetBuy: 1,
+            assetSell: 0,
+            amountBuy: trade.userDelta[1],
+            amountSell: -trade.userDelta[0],
+            valid: true,
+        };
+    }
+
+    // If the slider goes past the current market state, there is nothing to
+    // buy or sell, so we don't have a trade. But if we would hide the table,
+    // that's visually very jarring, so instead we pretend to buy 0.0 of
+    // asset 0.
+    return {
+        assetBuy: 0,
+        assetSell: 1,
+        amountBuy: 0.0,
+        amountSell: 0.0,
+        valid: false,
+    };
+}
+
+// Return the expected log wealth if we trade up to marginal probability `p`,
+// but we believe the true probability of outcome 0 is `q`.
+//
+// Returns NaN for cases where we can't afford the trade, because the wealths
+// would be negative, so log(wealth) does not exist.
+function expectedLogWealth(p, q) {
+    const trade = getTrade(p);
+    const b0 = trade.userBalance[0];
+    const b1 = trade.userBalance[1];
+    const bp = userLiquidPoints - trade.deposit;
+
+    // The log wealth for both outcome 0 and 1.
     const lw0 = Math.log(bp + b0);
     const lw1 = Math.log(bp + b1);
 
@@ -58,7 +105,6 @@ function expectedLogWealth(p, q) {
 // Given our true probability `q` for outcome 0, return the price `p` that we
 // should trade to to maximize our expected log wealth (the Kelly Criterion).
 function maximizeExpectedLogWealth(q) {
-    console.log("====");
     const clamp = (x, min, max) => Math.max(min, Math.min(x, max));
     // Iterate performs one Newton-Raphson iteration to get closer to a root of
     // the first derivative of `expectedLogWealth`. We estimate the first and
@@ -91,8 +137,6 @@ function maximizeExpectedLogWealth(q) {
         // when the optimum is there, because then we have no headroom to
         // compute the derivative numerically.
         const pNew = clamp(p - (d / dd), pMin + 0.001, pMax - 0.001);
-
-        console.log(p, pNew, lwp);
         return stepSize * pNew + (1.0 - stepSize) * p;
     };
 
@@ -107,45 +151,9 @@ function maximizeExpectedLogWealth(q) {
 
 // Prepare a trade offer, such that after the trade, the market's implied
 // probability is `p`.
-function getTrade(p) {
-    const new0 = -Math.log(invariant * p) * marketB;
-    const new1 = -Math.log(invariant * (1.0 - p)) * marketB;
-    const d0 = new0 - systemBalance[0];
-    const d1 = new1 - systemBalance[1];
-
-    var trade = null;
-
-    // The deltas are the delas in the *pool balance*, not the deltas in the
-    // user's balance, but the trade is from the point of view of the user.
-    if (d0 > 0.01) {
-        trade = {
-            assetBuy: 1,
-            assetSell: 0,
-            amountBuy: -d1,
-            amountSell: d0,
-            valid: true,
-        };
-    } else if (d1 > 0.01) {
-        trade = {
-            assetBuy: 0,
-            assetSell: 1,
-            amountBuy: -d0,
-            amountSell: d1,
-            valid: true,
-        };
-    } else {
-        // If the slider goes past the current market state, there is nothing to
-        // buy or sell, so we don't have a trade offer. But if we would hide the
-        // table, that's visually very jarring, so instead we pretend to buy 0.0
-        // of asset 0.
-        trade = {
-            assetBuy: 0,
-            assetSell: 1,
-            amountBuy: 0.0,
-            amountSell: 0.0,
-            valid: false,
-        };
-    }
+function updateTradeWidget(p) {
+    const baseTrade = getTrade(p);
+    const trade = getTradeDetails(baseTrade);
 
     const offerElem = document.getElementById("trade-offer");
     const offerTable = offerElem.getElementsByTagName("table")[0];
@@ -169,13 +177,11 @@ function getTrade(p) {
     // deposit. From the deposit we get both outcome shares, so in a sense we
     // "bought" more. Also, we don't want to double-count this deposit as shares
     // "sold". So adjust for deposit to get an "effective" amount bought/sold.
-    const deposit = Math.max(amountSell - userBalance[trade.assetSell], 0.0);
+    const deposit = baseTrade.deposit;
     const effectiveBuy = amountBuy + deposit;
     const effectiveSell = amountSell - deposit;
     const costPointsBuy = effectiveBuy * sharePricePoints;
     const costPointsSell = effectiveSell * (1.0 - sharePricePoints);
-
-    maximizeExpectedLogWealth(p);
 
     var sellRow = effectiveSell === 0.0 ? "" : `
     <tr>
@@ -222,6 +228,28 @@ function getTrade(p) {
 
     const submitButton = document.getElementById("trade-submit");
     submitButton.disabled = !trade.valid;
+}
+
+function updateBetSizingHelp(q) {
+    const table = document.getElementById("sizing-help");
+    const label = assetLabels[0];
+
+    const pKelly = maximizeExpectedLogWealth(q);
+
+    table.innerHTML = `
+    <tr>
+        <td>Belief ${label}</td>
+        <td class="num">${(q * 100.0).toFixed(0)}%</td>
+    </tr>
+    <tr>
+        <td>50% Kelly</td>
+        <td class="num">${label} to $\u200a0.888</td>
+    </tr>
+    <tr>
+        <td>Full Kelly</td>
+        <td class="num">${label} to $\u200a${pKelly.toFixed(2)}</td>
+    </tr>
+    `;
 }
 
 function initializeSlider() {
@@ -275,7 +303,8 @@ function initializeSlider() {
         const p = Math.max(min, Math.min(max, rx));
         selectedProbability = p;
         positionSlider(selectedProbability);
-        getTrade(selectedProbability);
+        updateTradeWidget(selectedProbability);
+        updateBetSizingHelp(selectedProbability);
     };
     const onDragEnd = (event) => {
         document.removeEventListener("mouseup", onDragEnd);
@@ -310,6 +339,7 @@ function initializeSlider() {
     setPercentage(tUser, pUser, p);
     if (isOpen) {
         positionSlider(p);
+        updateBetSizingHelp(p);
     } else {
         knob.parentElement.removeChild(knob);
     }
