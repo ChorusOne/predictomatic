@@ -289,24 +289,24 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                                 td .num { "—%" }
                             }
                             tr {
-                                td { "50% Kelly" }
+                                td { "1/4 Kelly" }
                                 td .num {
+                                    "$\u{200a}— of "
                                     (market.outcomes[0].value)
-                                    " to $\u{200a}—"
+                                }
+                            }
+                            tr {
+                                td { "1/2 Kelly" }
+                                td .num #bet-sizing-b {
+                                    "$\u{200a}— of "
+                                    (market.outcomes[0].value)
                                 }
                             }
                             tr {
                                 td { "Full Kelly" }
-                                td .num {
+                                td .num #bet-sizing-c {
+                                    "$\u{200a}— of "
                                     (market.outcomes[0].value)
-                                    " to $\u{200a}—"
-                                }
-                            }
-                            tr {
-                                td { "Neutral" }
-                                td .num {
-                                    (market.outcomes[0].value)
-                                    " to $\u{200a}—"
                                 }
                             }
                         }

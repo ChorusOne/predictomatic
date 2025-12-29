@@ -356,6 +356,10 @@ td.strong, strong {
     max-height: 3.4rem;
 }
 
+.clickable {
+    cursor: pointer;
+}
+
 /* In participant tables, mark the current user with an arrow and a slightly
  * bolder line, so people can easily locate themselves. */
 tr.self {

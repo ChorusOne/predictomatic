@@ -21,6 +21,12 @@ const pMax = 1.0 - Math.exp(-max1 / marketB) / invariant;
 
 const canTrade = pMax - pMin > 0.001;
 
+// When we compute the Kelly bet when moving the slider, we store it here, so
+// that when the user clicks one of the rows in the bet sizing help, we can
+// apply from here. We also store the probability that we need to trade to.
+let kellyBet = null;
+let kellyProbability = null;
+
 function getProbability(balance) {
     const ps = balance.map(lk => Math.exp(-lk / marketB));
     return ps[0] / invariant;
@@ -44,6 +50,7 @@ function getTrade(p) {
     const b1 = b1a + deposit;
 
     return {
+        probability: p,
         userDelta: [-d0, -d1],
         userBalance: [b0, b1],
         deposit: deposit,
@@ -51,37 +58,62 @@ function getTrade(p) {
 }
 
 function getTradeDetails(trade) {
-    if (trade.userDelta[0] > 0.01) {
-        return {
+    // We can compute the average cost from the ratio: the sum of the prices
+    // is 1, so solving yields price = 1 / (ratio + 1). In other words, the
+    // ratio of the prices is the odds, and we convert the odds back to a
+    // probability. When both amounts are 0, the ratio does not exist, and we
+    // get NaN here, but in that case we don't use the value below.
+    const ratio = -trade.userDelta[0] / trade.userDelta[1];
+    const price0 = 1.0 / (ratio + 1.0);
+    let result = null;
+
+    do {
+        if (trade.userDelta[0] > 0.01) {
+            result = {
+                assetBuy: 0,
+                assetSell: 1,
+                amountBuy: trade.userDelta[0],
+                amountSell: -trade.userDelta[1],
+                sharePricePoints: price0,
+                valid: true,
+            };
+            break;
+        }
+
+        if (trade.userDelta[1] > 0.01) {
+            result = {
+                assetBuy: 1,
+                assetSell: 0,
+                amountBuy: trade.userDelta[1],
+                amountSell: -trade.userDelta[0],
+                sharePricePoints: 1.0 - price0,
+                valid: true,
+            };
+            break;
+        }
+
+        // If the slider goes past the current market state, there is nothing to
+        // buy or sell, so we don't have a trade. But if we would hide the table,
+        // that's visually very jarring, so instead we pretend to buy 0.0 of
+        // asset 0.
+        result = {
             assetBuy: 0,
             assetSell: 1,
-            amountBuy: trade.userDelta[0],
-            amountSell: -trade.userDelta[1],
-            valid: true,
+            amountBuy: 0.0,
+            amountSell: 0.0,
+            // If there is no swap, so no implied share price, then we can still
+            // use the market probability, which is the marginal price.
+            sharePricePoints: trade.probability,
+            valid: false,
         };
     }
+    while (false);
 
-    if (trade.userDelta[1] > 0.01) {
-        return {
-            assetBuy: 1,
-            assetSell: 0,
-            amountBuy: trade.userDelta[1],
-            amountSell: -trade.userDelta[0],
-            valid: true,
-        };
-    }
+    // The volume for the purpose of Kelly computations etc. on this page, is
+    // including deposit. It's about what we buy, not about how we finance it.
+    result.volumePoints = (result.amountBuy + trade.deposit) * result.sharePricePoints;
 
-    // If the slider goes past the current market state, there is nothing to
-    // buy or sell, so we don't have a trade. But if we would hide the table,
-    // that's visually very jarring, so instead we pretend to buy 0.0 of
-    // asset 0.
-    return {
-        assetBuy: 0,
-        assetSell: 1,
-        amountBuy: 0.0,
-        amountSell: 0.0,
-        valid: false,
-    };
+    return result;
 }
 
 // Return the expected log wealth if we trade up to marginal probability `p`,
@@ -162,15 +194,7 @@ function updateTradeWidget(p) {
     const amountSell = trade.amountSell;
     const labelBuy = assetLabels[trade.assetBuy];
     const labelSell = assetLabels[trade.assetSell];
-    const ratio = trade.amountBuy / trade.amountSell;
-
-    // We can compute the average cost from the ratio: the sum of the prices
-    // is 1, so solving yields price = 1 / (ratio + 1). In other words, the
-    // ratio of the prices is the odds, and we convert the odds back to a
-    // probability. However, when both amounts are 0, the ratio does not exist.
-    // That case happens when the slider is at the market probability, so then
-    // we still have a price: the current market price.
-    const sharePricePoints = trade.valid ? (1.0 / (ratio + 1.0)) : p;
+    const sharePricePoints = trade.sharePricePoints;
 
     // The `amountBuy` and `amountSell` so far are against the system. If the
     // user does not have enough shares to sell, we need to make an additional
@@ -232,27 +256,77 @@ function updateTradeWidget(p) {
 
 function updateBetSizingHelp(q) {
     const table = document.getElementById("sizing-help");
-    const label = assetLabels[0];
 
+    // Update the global variables with the Kelly bet for what we believe
+    // is the true probability of outcome 0.
     const pKelly = maximizeExpectedLogWealth(q);
+    const kellyBase = getTrade(pKelly);
+    kellyBet = getTradeDetails(kellyBase);
+    kellyProbability = pKelly;
+
+    const labelBuy = assetLabels[kellyBet.assetBuy];
+    const kellyVolume = kellyBet.volumePoints;
 
     table.innerHTML = `
     <tr>
-        <td>Belief ${label}</td>
+        <td>Belief ${assetLabels[0]}</td>
         <td class="num">${(q * 100.0).toFixed(0)}%</td>
     </tr>
-    <tr>
-        <td>50% Kelly</td>
-        <td class="num">${label} to $\u200a0.888</td>
+    <tr onclick="onClickKelly(1/4)" class="clickable">
+        <td>1/4 Kelly</td>
+        <td class="num">$\u200a${(kellyVolume / 4).toFixed(2)} of ${labelBuy}</td>
     </tr>
-    <tr>
+    <tr onclick="onClickKelly(1/2)" class="clickable">
+        <td>1/2 Kelly</td>
+        <td class="num">$\u200a${(kellyVolume / 2).toFixed(2)} of ${labelBuy}</td>
+    </tr>
+    <tr onclick="onClickKelly(1)" class="clickable">
         <td>Full Kelly</td>
-        <td class="num">${label} to $\u200a${pKelly.toFixed(2)}</td>
+        <td class="num">$\u200a${kellyVolume.toFixed(2)} of ${labelBuy}</td>
     </tr>
     `;
+
+    // TODO: Add a neutral row as well, to suggest the trade that exits to a
+    // neutal position.
 }
 
-function initializeSlider() {
+// Given a fraction, return the probability that we should trade to so that the
+// trade volume is the given fraction of the Kelly bet.
+function getFractionalKellyProbability(fraction) {
+    const targetVolume = kellyBet.volumePoints * fraction;
+
+    // We know the volume of Full Kelly, and the probability to which we
+    // need to set the slider to make that trade, but if we want a fraction
+    // of that, we want a fraction of the *volume* and not a fraction of the
+    // probability movement. There is probably a way to solve it exactly but
+    // I am lazy so we'll just binary search for it.
+    let p0 = getProbability(systemBalance);
+    let p1 = kellyProbability;
+    console.log("Starting at", p0, p1);
+
+    if (fraction < 1.0) {
+        let v0 = 0.0;
+        let v1 = kellyBet.volumePoints;
+
+        // 20 iterations is enough for it to converge to match the target volume
+        // to 4 decimals.
+        for (let i = 0; i < 20; i++) {
+            let pm = (p0 + p1) * 0.5;
+            let trade = getTradeDetails(getTrade(pm));
+            let vm = trade.volumePoints;
+
+            if (vm > targetVolume) {
+                p1 = pm;
+            } else {
+                p0 = pm;
+            }
+        }
+    }
+
+    return p1;
+}
+
+function initialize() {
     const widget = document.getElementById("trade-widget");
     const knob = widget.getElementsByClassName("knob")[0];
     const hr = widget.getElementsByTagName("hr")[0];
@@ -332,6 +406,12 @@ function initializeSlider() {
     if (canTrade) {
         knob.addEventListener("mousedown", onDragStart);
         knob.addEventListener("touchstart", onDragStart);
+
+        document.onClickKelly = (fraction) => {
+            selectedProbability = getFractionalKellyProbability(fraction);
+            positionSlider(selectedProbability);
+            updateTradeWidget(selectedProbability);
+        };
     }
 
     const p = getProbability(systemBalance);
@@ -345,10 +425,6 @@ function initializeSlider() {
     }
 
     window.addEventListener("resize", onResize);
-}
-
-function initialize() {
-    initializeSlider();
 }
 
 document.addEventListener("DOMContentLoaded", initialize);
