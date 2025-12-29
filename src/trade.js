@@ -58,25 +58,26 @@ function expectedLogWealth(p, q) {
 // Given our true probability `q` for outcome 0, return the price `p` that we
 // should trade to to maximize our expected log wealth (the Kelly Criterion).
 function maximizeExpectedLogWealth(q) {
+    console.log("====");
+    const clamp = (x, min, max) => Math.max(min, Math.min(x, max));
     // Iterate performs one Newton-Raphson iteration to get closer to a root of
     // the first derivative of `expectedLogWealth`. We estimate the first and
     // second derivative numerically.
     const iterate = p => {
-        const p0 = Math.max(p - 0.02, p * 0.5, pMin);
-        const p1 = Math.min(p + 0.02, (p + 1.0) * 0.5, pMax);
-        const ph = (p0 + p1) * 0.5;
-        const dp = (p1 - p0) * 0.5;
+        const pp = p;
+        const p0 = Math.max(p - 0.01, (p + pMin) * 0.5, pMin);
+        const p1 = Math.min(p + 0.01, (p + pMax) * 0.5, pMax);
 
         // Evaluate the log wealth at three points.
         const lw0 = expectedLogWealth(p0, q);
-        const lwh = expectedLogWealth(ph, q);
+        const lwp = expectedLogWealth(pp, q);
         const lw1 = expectedLogWealth(p1, q);
 
         // The three points give us two derivatives, and those give us one
         // second derivative.
-        const d0 = (lwh - lw0) / dp;
-        const d1 = (lw1 - lwh) / dp;
-        const dd = (d1 - d0) / dp;
+        const d0 = (lwp - lw0) / (pp - p0);
+        const d1 = (lw1 - lwp) / (p1 - pp);
+        const dd = (d1 - d0) / ((p1 - p0) * 0.5);
         const d = (d0 + d1) * 0.5;
 
         // The standard formula has a step size of 1, but we know that the log
@@ -84,11 +85,15 @@ function maximizeExpectedLogWealth(q) {
         // then if we overshoot, we end up in this steep region of the graph
         // where it takes a few iterations to recover. So when we get close to
         // the edge, take smaller steps.
-        const stepsize = (p < 0.20 || p > 0.80) ? 0.33 : 1.0;
+        const stepSize = (p < 0.20 || p > 0.80) ? 0.5 : 1.0;
 
-        console.log(p, lwh);
+        // We don't want the suggestion to go all the way to pMin or pMax even
+        // when the optimum is there, because then we have no headroom to
+        // compute the derivative numerically.
+        const pNew = clamp(p - (d / dd), pMin + 0.001, pMax - 0.001);
 
-        return Math.max(pMin, Math.min(pMax, p - stepsize * (d / dd)));
+        console.log(p, pNew, lwp);
+        return stepSize * pNew + (1.0 - stepSize) * p;
     };
 
     // If the optimium is somewhere between 0.1 and 0.9, it converges very

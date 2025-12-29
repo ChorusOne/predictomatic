@@ -174,6 +174,20 @@ fn view_prediction_binary(
                     button #trade-submit type="submit" disabled { "Trade" }
                 }
             }
+            h3 { "Bet sizing help" }
+            p {
+                "If the true probability of "
+                (market.outcomes[0].value)
+                " is "
+                (percentage)
+                ", the Kelly Criterion suggests trading to $0.50."
+            }
+            form id="sizing-help" {
+                button { "Select 50% Kelly" }
+                button { "Select 66% Kelly" }
+                button { "Select 100% Kelly" }
+                button { "Select neutral" }
+            }
         }
     }
 }
