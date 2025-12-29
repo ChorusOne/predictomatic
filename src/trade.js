@@ -221,9 +221,9 @@ function updateTradeWidget(p) {
 
     var depositRow = deposit === 0.0 ? "" : `
     <tr>
-      <td>Lock</td>
+      <td>Pay</td>
       <td class="num amount">$\u{200a}${deposit.toFixed(2)}</td>
-      <td colspan="5"> up in this market until resolution</td>
+      <td colspan="5"> from your liquid points</td>
     </tr>
     `;
 
