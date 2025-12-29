@@ -310,12 +310,29 @@ aside form label input {
 
 #trade-offer div {
     display: grid;
-    grid-template-columns: auto 1fr 4rem;
-    grid-template-areas: 'table _1 form';
+    /* The trade button should be 4rem wide, except when the trade offer table
+       is so wide that it doesn't fit, then we let that table eat a bit into the
+       space of the trade button. */
+    grid-template-columns: auto minmax(2rem, 4rem);
+    grid-template-areas: 'table form';
+    grid-column-gap: 1rem;
 }
 
 #trade-offer form { grid-area: form; }
-#trade-offer table { grid-area: table; }
+
+#trade-offer table {
+    grid-area: table;
+    /* With long share names and/or numbers, on a narrow viewport, the trade
+    offer table doesn't really fit, but if we let it line-wrap, it looks really
+    ugly and unreadable. Better to not let it wrap. That actually works fine and
+    then the table remains wider which makes the sidebar narrower. That's
+    actually quite neat, except that it makes the width of the table jump when
+    you move the slider to trade. That changes the width of the slider itself,
+    and that changes the meaning of the current cursor position. We can avoid
+    that by setting overflow:hidden here, but a nicer solution is to steal some
+    space from the trade button, which is what the minmax above does. */
+    text-wrap-mode: nowrap;
+}
 
 #trade-offer td {
     padding-left: 0.9ex;
@@ -335,6 +352,8 @@ td.strong, strong {
 #trade-offer button {
     width: 100%;
     height: 100%;
+    /* Make it at most two lines tall, even when the table has 3 lines. */
+    max-height: 3.4rem;
 }
 
 #sizing-help {
