@@ -286,7 +286,11 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                     }
 
                     @if market.is_open() {
-                        h3 { "Bet sizing help "}
+                        h3 {
+                            a href={(ctx.prefix) "/help#bet-sizing"} {
+                                "Bet sizing help"
+                            }
+                        }
                         table #sizing-help-kelly {
                             tr {
                                 td { "Belief " (market.outcomes[0].value) }
