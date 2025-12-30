@@ -308,13 +308,14 @@ function updateBetSizingHelp(q) {
     const kellyVolume = kellyBet.volumePoints;
 
     document.getElementById("sizing-help-kelly").innerHTML = `
-    <tr>
+    <tr title="Your estimate of the probability that the market resolves ${assetLabels[0]},
+for the purpose of the Kelly computation.">
         <td>Belief ${assetLabels[0]}</td>
         <td class="num">${(q * 100.0).toFixed(1)}%</td>
     </tr>
     <tr title="The trade that maximizes your expected log-wealth.">
         <td>Kelly bet</td>
-        <td class="num">$\u200a${kellyVolume.toFixed(2)} of ${assetLabels[kellyBet.assetBuy]}</td>
+        <td class="num">$\u200a${kellyVolume.toFixed(2)} of ${labelBuy}</td>
     </tr>
     `;
 }

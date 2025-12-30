@@ -60,11 +60,7 @@ There are two ways to pay for that order.
 If you already own outcome shares in the opposite outcome,
 you can sell those.
 If you have not participated in the market before,
-you can <em>deposit</em> to create new outcome shares first.
-When you deposit $1,
-you create one new share in every outcome.
-You can then swap the undesired ones for more of the desired ones.
-When you trade, these two steps happen automatically in a single transaction.
+you can <em>deposit</em> to create new outcome shares.
 The system selects the optimal way to finance the order for you.
 It will sell outcome shares before spending liquid points.
 

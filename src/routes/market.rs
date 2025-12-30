@@ -156,7 +156,7 @@ fn view_prediction_binary(
         }
         noscript { "You need to enable Javascript to trade." }
         div #trade-offer {
-            h3 { "Trade" }
+            h3 { a href={(ctx.prefix) "/help#trading"} { "Trade" } }
             // The JS replaces the contents of the table when dragging the slider.
             div {
                 table {
