@@ -344,7 +344,6 @@ function getFractionalKellyProbability(fraction) {
     // I am lazy so we'll just binary search for it.
     let p0 = getProbability(systemBalance);
     let p1 = kellyProbability;
-    console.log("Starting at", p0, p1);
 
     if (fraction < 1.0) {
         let v0 = 0.0;
