@@ -50,18 +50,47 @@ If you have a share in every outcome,
 then you will receive $1 at resolution regardless of how the market resolves,
 therefore a basket with one share in every outcome is worth $1.
 
+## Trading
+
+You can trade in a market by moving the probability slider
+and then clicking the ‘Trade’ button to confirm the trade.
+When you trade,
+you buy outcome shares from an <em>automated market maker</em> (see below).
+There are two ways to pay for that order.
+If you already own outcome shares in the opposite outcome,
+you can sell those.
+If you have not participated in the market before,
+you can <em>deposit</em> to create new outcome shares first.
+When you deposit $1,
+you create one new share in every outcome.
+You can then swap the undesired ones for more of the desired ones.
+When you trade, these two steps happen automatically in a single transaction.
+The system selects the optimal way to finance the order for you.
+It will sell outcome shares before spending liquid points.
+
+When you trade,
+this changes the market price of outcome shares,
+and therefore the market prediction.
+The market price is the <em>marginal</em> price of an outcome share:
+the price you’d pay if you bought a tiny amount.
+The more shares you buy,
+the more their price goes up.
+This means that the <em>average</em> price you pay per share,
+is lower than the new marginal price after your trade.
+
+
 ## Depositing
 
-When you deposit points into a market,
-you lock up the points.
-In return  you get an equal amount of shares in every outcome.
-For example,
+To participate in a market, you deposit points.
+This happens automatically when you trade,
+as described above.
+By depositing points, you create an equal amount of shares in every outcome.
+For instance,
 if you deposit $10 into the example market described earlier,
 you get 10 Yes + 10 No.
-This is a neutral position:
-your proceeds on resolution do not depend on how the market resolves.
-To take a non-neutral position,
-you can trade the Yes and No shares.
+When the market resolves as Yes,
+that $10 is paid out to the holders of the Yes shares;
+when it resolves No the $10 is paid to No holders.
 
 Deposited points are locked until resolution,
 withdrawing from a market is not possible.
@@ -75,23 +104,6 @@ Although it is not possible to withdraw,
 you can exit a non-neutral position and take profits by trading
 until you have an equal amount of every outcome share.
 
-## Trading
-
-After depositing, you can trade in a market by moving the probability slider.
-When you trade, you <em>swap</em> outcome shares.
-For example, you buy 5 Yes shares, and you pay for that with 10 No shares.
-You swap shares for other shares, you don’t trade shares for points directly.
-Still, every swap implies a price per share,
-and therefore a probability.
-The ratio of No:Yes corresponds to the odds of a positive outcome.
-Odds of 10:5 mean a probability of 10/15,
-so about 67% probability that ‘Yes’ will happen,
-and 33% that ‘No’ will happen.
-In other words, the average price you paid was $0.67 per Yes share.
-When you move the slider to trade,
-the trade offer displays this average price in points for your convenience,
-even though only outcome shares change hands.
-
 ## Automated market maker
 
 When you trade,
@@ -104,3 +116,18 @@ If you are going to make money here,
 When you are the only participant in a market,
 or when all participants bet in the same direction,
 it’s the system that takes the other side of the bet.
+
+When you trade against the automated market maker,
+you <em>swap</em> outcome shares.
+For example, you buy 5 Yes shares, and you pay for that with 10 No shares.
+Even though only outcome shares change hands,
+every swap implies a price per share,
+and therefore a probability.
+The ratio of No:Yes corresponds to the odds of a positive outcome.
+Odds of 10:5 mean a probability of 10/15,
+so about 67% probability that ‘Yes’ will happen,
+and 33% that ‘No’ will happen.
+In other words, the average price you paid was $0.67 per Yes share.
+When you move the slider to trade,
+the user interface displays this average price in points for your convenience,
+even though only outcome shares change hands.
