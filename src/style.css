@@ -15,7 +15,7 @@ html {
 
 @media (prefers-color-scheme: dark) {
     html {
-        --bg: #111;
+        --bg: #221f11;
         /* Slightly less bright variation of the light background color. */
         --fg: #e3c57a;
         --dp: #000
