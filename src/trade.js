@@ -476,12 +476,12 @@ function initialize() {
         if (userDeposited > 0.0) {
             const neutralPnL = getNeutralPositionProfit();
             const neutralLabel =
-                neutralPnL > 0.0
+                neutralPnL >= 0.0
                 ? `${neutralPnL.toFixed(2)} profit`
                 : `${(-neutralPnL).toFixed(2)} loss`;
 
             document.getElementById("button-neutral").innerText =
-                `Neutral, take $\u200a${neutralLabel}`;
+                `Neutral, $\u200a${neutralLabel}`;
         }
     }
 
