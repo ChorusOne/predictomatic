@@ -141,7 +141,7 @@ The bet sizing help takes your existing outcome shares into account.
 For this reason, it sometimes recommends trading in the opposite direction:
 if you can greatly reduce your worst-case loss
 at a very small cost to your best-case profit,
-that can be sensible thing to do.
+that can be a sensible thing to do.
 
 ## Deposits
 
