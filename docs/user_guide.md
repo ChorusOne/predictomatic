@@ -164,9 +164,14 @@ This ensures that the market can be dissolved when it is unclear how it should r
 When a market dissolves,
 every participant gets their deposit back,
 as if no trades ever happened.
+
 Although it is not possible to withdraw,
 you can exit a non-neutral position and take profits by trading
 until you have an equal amount of every outcome share.
+Such an outcome-neutral position pays out the same amount
+regardless of how the market resolves.
+The <em>bet sizing help</em> section in the sidebar includes a button
+that computes the appropriate trade to take an outcome-neutral position.
 
 ## Automated market maker
 
