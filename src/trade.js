@@ -290,8 +290,8 @@ function updateTradeWidget(p) {
         document.trade_form.asset_out.value = assetIds[trade.assetBuy];
         document.trade_form.amount_in.value = trade.amountSell.toFixed(2);
         // Build in 2% slippage tolerance.
-        // TODO: Let the user pick.
         document.trade_form.min_out.value = (trade.amountBuy * 0.98).toFixed(6);
+        document.trade_form.max_deposit.value = deposit.toFixed(6);
     }
 
     // For trades that include a large deposit, ask the user to confirm.

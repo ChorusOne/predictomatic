@@ -171,6 +171,7 @@ fn view_prediction_binary(
                     input type="hidden" name="min_out" value="0";
                     input type="hidden" name="asset_in" value="0";
                     input type="hidden" name="asset_out" value="0";
+                    input type="hidden" name="max_deposit" value="0";
                     button #trade-submit type="submit" disabled { "Trade" }
                 }
             }
@@ -413,6 +414,8 @@ pub fn handle_trade(
     let mut min_out_str = None;
     let mut asset_in = AssetId::POINTS;
     let mut asset_out = AssetId::POINTS;
+    let mut max_deposit = AssetId::POINTS.zero();
+    let mut deposit = AssetId::POINTS.zero();
 
     for (key, value) in form_urlencoded::parse(body.as_bytes()) {
         match key.as_ref() {
@@ -426,6 +429,10 @@ pub fn handle_trade(
             "asset_out" => match i64::from_str(value.as_ref()) {
                 Ok(n) => asset_out = AssetId(n),
                 Err(..) => return ctx.bad_request("Invalid asset id for asset_out."),
+            },
+            "max_deposit" => match AssetId::POINTS.parse_amount(value.as_ref()) {
+                Some(n) => max_deposit = n,
+                None => return ctx.bad_request("Invalid max_deposit amount."),
             },
             _ => return ctx.bad_request("Unexpected form data."),
         }
@@ -461,15 +468,35 @@ pub fn handle_trade(
         ));
     }
 
+    if max_deposit > ctx.user_points {
+        return ctx.bad_request(format!(
+            "This trade includes a deposit of {} points, but you have only {}.",
+            max_deposit, ctx.user_points,
+        ));
+    }
+
     // Due to the way the frontend computes amount_in, it may overestimate the
     // amount it wants to trade by a slight amount, and that then causes an
     // constraint violation due to trying to trade more than the available
     // balance. For small differences we can fix that by limiting amount_in to
-    // the amount we have available to spend.
+    // the amount we have available to spend. At this stage we can also
+    // determine how much we need to deposit, if any.
     if let Some(user_balance) = market.balances.get(ctx.user_email) {
         for b in &user_balance.outcomes {
             if b.1 == amount_in.1 {
-                amount_in = std::cmp::min(amount_in, *b);
+                // The maximum we can spend is the current balance of this asset,
+                // plus any we create from depositing. We already checked that
+                // we can afford the deposit if needed.
+                let max_spend = max_deposit.cast(b.1) + *b;
+                amount_in = std::cmp::min(amount_in, max_spend);
+
+                // The amount we actually need to deposit may be less than the
+                // max_deposit specified in the request; we only want to deposit
+                // the very minimum.
+                if amount_in > *b {
+                    deposit = (amount_in - *b).cast(AssetId::POINTS);
+                }
+
                 break;
             }
         }
@@ -488,9 +515,12 @@ pub fn handle_trade(
     };
 
     println!(
-        "Trading in market {}: {:?}:{amount_in} -> {:?}:{amount_out}",
+        "Trading in market {}: {:?}:{amount_in} -> {:?}:{amount_out}, deposit {deposit}",
         market.slug, asset_in, asset_out
     );
+    if deposit > AssetId::POINTS.zero() {
+        model::create_deposit(tx, &market, deposit, ctx.user_email)?;
+    }
     model::create_trade(tx, &market, amount_in, amount_out, ctx.user_email)?;
 
     Ok(redirect_see_other(ctx.market_url(&market, "")))
