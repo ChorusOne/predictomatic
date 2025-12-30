@@ -227,6 +227,10 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
         .find(|pos| pos.owner == "SYSTEM")
         .expect("System always has a position.");
 
+    let deposited = our_position
+        .map(|p| p.balance.points)
+        .unwrap_or(AssetId::POINTS.zero());
+
     // We also feed in the serialized current positions into js.
     // TODO: Use serde_json or something instead.
     let balance_user: Vec<String> = match our_position {
@@ -320,6 +324,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                     "const isOpen = false;\n"
                 }
                 "const userLiquidPoints = " (ctx.user_points) ";\n"
+                "const userDeposited = " (deposited) ";\n"
                 "const systemBalance = [" @for b in balance_system { (b) ", " } "];\n"
                 "const userBalance = [" @for b in balance_user { (b) ", " } "];\n"
                 "const assetIds = [" @for oc in &market.outcomes { (oc.id.0) ", " } "];\n"

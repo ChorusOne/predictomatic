@@ -181,6 +181,36 @@ function maximizeExpectedLogWealth(q) {
     return p;
 }
 
+// Return the probability `p` that we should trade to, so that at the end we
+// have an equal number of shares in every outcome.
+function getNeutralPosition() {
+    const clamp = (x, min, max) => Math.max(min, Math.min(x, max));
+    // Iterate performs one Newton-Raphson iteration; wee also
+    // `maximizeExpectedLogWealth` above.
+    const iterate = p => {
+        const p0 = Math.max(p - 0.01, (p + pMin) * 0.5, pMin);
+        const p1 = Math.min(p + 0.01, (p + pMax) * 0.5, pMax);
+
+        // Newton-Raphson finds root, in this case we want a root of the
+        // difference between balances, so we only need to numerically estimate
+        // the first derivative.
+        const t0 = getTrade(p0);
+        const t1 = getTrade(p1);
+        const v0 = t0.userBalance[0] - t0.userBalance[1];
+        const v1 = t1.userBalance[0] - t1.userBalance[1];
+        const vm = (v0 + v1) * 0.5;
+        const dv = (v1 - v0) / (p1 - p0);
+        return clamp(p - (vm / dv), pMin + 0.001, pMax - 0.001);
+    };
+
+    // 15 iterations is enough to converge to more than 10 decimal digits.
+    // Event 7 seems to be enough but it's fast anyway.
+    let p = 0.5;
+    for (let i = 0; i < 15; i++) p = iterate(p);
+
+    return p;
+}
+
 // Prepare a trade offer, such that after the trade, the market's implied
 // probability is `p`.
 function updateTradeWidget(p) {
@@ -262,21 +292,34 @@ function updateBetSizingHelp(q) {
     // Update the global variables with the Kelly bet for what we believe
     // is the true probability of outcome 0.
     const pKelly = maximizeExpectedLogWealth(q);
-    const kellyBase = getTrade(pKelly);
-    kellyBet = getTradeDetails(kellyBase);
+    kellyBet = getTradeDetails(getTrade(pKelly));
     kellyProbability = pKelly;
 
     const labelBuy = assetLabels[kellyBet.assetBuy];
     const kellyVolume = kellyBet.volumePoints;
+
+    const pNeutral = getNeutralPosition();
+    const neutralBase = getTrade(pNeutral);
+    const neutralBet = getTradeDetails(neutralBase);
+    const neutralVolume = neutralBet.volumePoints;
+    const neutralPnL = neutralBase.userBalance[0] - userDeposited;
 
     table.innerHTML = `
     <tr>
         <td>Belief ${assetLabels[0]}</td>
         <td class="num">${(q * 100.0).toFixed(0)}%</td>
     </tr>
-    <tr>
+    <tr title="The trade that maximizes your expected log-wealth.">
         <td>Kelly bet</td>
-        <td class="num">$\u200a${kellyVolume.toFixed(2)} of ${labelBuy}</td>
+        <td class="num">$\u200a${kellyVolume.toFixed(2)} of ${assetLabels[kellyBet.assetBuy]}</td>
+    </tr>
+    <tr title="The trade that exits to a neutral position, to realize profits and loss.">
+        <td>Neutral</td>
+        <td class="num">$\u200a${neutralVolume.toFixed(2)} of ${assetLabels[neutralBet.assetBuy]}</td>
+    </tr>
+    <tr title="The profit you realize when you execute the trade to a neutral position.">
+        <td>Neutral PnL</td>
+        <td class="num">$\u200a${neutralPnL.toFixed(2)}</td>
     </tr>
     `;
 
