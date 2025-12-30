@@ -241,6 +241,17 @@ aside form label input {
     text-align: right;
 }
 
+.kelly-buttons {
+    margin-top: 0.5rem;
+    display: grid;
+    grid-auto-flow: column;
+    grid-column-gap: 0.5rem;
+}
+
+.kelly-buttons button {
+    background: transparent;
+}
+
 .slider {
     width: calc(100% - 2rem);
     height: 10rem;

@@ -310,6 +310,16 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                                 }
                             }
                         }
+                        div .kelly-buttons {
+                            button { "1/4" br; "Kelly" }
+                            button { "1/3" br; "Kelly" }
+                            button { "1/2" br; "Kelly" }
+                            button { "2/3" br; "Kelly" }
+                        }
+                        div .kelly-buttons {
+                            button { "Neutral" }
+                            button { "Full Kelly" }
+                        }
                     }
 
                     @if ctx.is_admin && market.is_open() {
