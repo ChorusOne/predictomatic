@@ -78,12 +78,80 @@ the more their price goes up.
 This means that the <em>average</em> price you pay per share,
 is lower than the new marginal price after your trade.
 
+## Making a profit
 
-## Depositing
+When your belief about an outcome differs from the market price,
+you can trade for an expected profit.
+For example,
+if you believe that there is an 80% probability that the market will resolve ‘Yes’,
+that corresponds to a price of $0.80.
+If the current market price for Yes shares is $0.60,
+they are effectively on discount to you.
+Suppose you spend $7 to buy 10 Yes shares,
+and that trade moves the market price from $0.60 to $0.80.
+You believe that when the market resolves,
+with 80% probability you get $10 (a profit of $3);
+with 20% probability you get $0 (a loss of $7).
+Your expected profit is therefore 0.8&nbsp;×&nbsp;$3 – 0.2&nbsp;×&nbsp;$7 = $1.
+
+Note that this $1 “expected profit” is merely a <em>statistical tool</em>.
+There is not actually an outcome where you make $1 profit!
+You either make a $3 profit, or a $7 loss.
+In particular,
+even though your expected profit is positive,
+<em>you can still make a loss</em>.
+
+## Bet sizing
+
+The trade that maximizes your expected profit is to buy shares
+until their marginal price matches what you believe is the true probability.
+This strategy is optimal when you have infinite money to spend,
+but it’s reckless when your bank account is finite.
+As shown above, even when your expected profit is positive,
+you can be unlucky and suffer a loss.
+This can lead to <em>ruin</em>:
+when you are bankrupt, you don’t get to trade again.
+
+To avoid ruin,
+rather than maximizing our expected wealth,
+we can maximize our expected <em>log wealth</em>.
+This has several nice properties.
+In particular, the logarithm goes to –∞ as wealth goes to 0,
+so this approach penalizes bets that risk bankruptcy
+while still encouraging wealth growth.
+Maximizing log wealth is called the <em>Kelly Criterion</em>,
+and the optimal amount to bet is called the <em>Kelly bet</em>.
+Kelly helps us stay solvent:
+a participant who consistently bets more than the Kelly bet,
+will eventually bankrupt themselves with probability 1.
+
+Kelly helps us avoid ruin, but it’s still risky.
+Standard investment advice goes:
+<strong>never go full Kelly</strong>.
+Kelly only <em>barely</em> avoids ruin,
+and the Kelly bet depends on your probability estimate.
+When your estimates are off,
+you are taking on more risk than you realize.
+
+To help you size your bet,
+the trade interface contains <em>bet sizing help</em> in the sidebar.
+You enter your belief for the probability that the market resolves Yes
+by moving the trade slider,
+and the bet sizing help computes the trade that maximizes your log wealth
+under that belief.
+You can click the different fractions to select that trade.
+(You still need to click the ‘Trade’ button to execute the trade.)
+The bet sizing help takes your existing outcome shares into account.
+For this reason, it sometimes recommends trading in the opposite direction:
+if you can greatly reduce your worst-case loss
+at a very small cost to your best-case profit,
+that can be sensible thing to do.
+
+## Deposits
 
 To participate in a market, you deposit points.
 This happens automatically when you trade,
-as described above.
+as described in the <a href="#trading">trading section</a>.
 By depositing points, you create an equal amount of shares in every outcome.
 For instance,
 if you deposit $10 into the example market described earlier,
@@ -107,7 +175,7 @@ until you have an equal amount of every outcome share.
 ## Automated market maker
 
 When you trade,
-you always trade against an automated market maker that is managed by the system.
+you trade against an automated market maker that is managed by the system.
 The market maker ensures that you can always trade,
 and it provides a way to subsidize the market.
 Prediction markets are zero-sum.
