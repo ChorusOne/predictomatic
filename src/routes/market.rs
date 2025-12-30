@@ -397,7 +397,6 @@ pub fn handle_trade(
     let mut asset_in = AssetId::POINTS;
     let mut asset_out = AssetId::POINTS;
     let mut max_deposit = AssetId::POINTS.zero();
-    let mut deposit = AssetId::POINTS.zero();
 
     for (key, value) in form_urlencoded::parse(body.as_bytes()) {
         match key.as_ref() {
@@ -457,31 +456,35 @@ pub fn handle_trade(
         ));
     }
 
+    // Get the the user's current balance of the in asset. It may not exict when
+    // the user does not have an account yet, then the balance is zero.
+    let mut user_balance_in = asset_in.zero();
+    if let Some(user_balance) = market.balances.get(ctx.user_email) {
+        for b in &user_balance.outcomes {
+            if b.1 == amount_in.1 {
+                user_balance_in = *b;
+                break;
+            }
+        }
+    }
+
     // Due to the way the frontend computes amount_in, it may overestimate the
     // amount it wants to trade by a slight amount, and that then causes an
     // constraint violation due to trying to trade more than the available
     // balance. For small differences we can fix that by limiting amount_in to
-    // the amount we have available to spend. At this stage we can also
-    // determine how much we need to deposit, if any.
-    if let Some(user_balance) = market.balances.get(ctx.user_email) {
-        for b in &user_balance.outcomes {
-            if b.1 == amount_in.1 {
-                // The maximum we can spend is the current balance of this asset,
-                // plus any we create from depositing. We already checked that
-                // we can afford the deposit if needed.
-                let max_spend = max_deposit.cast(b.1) + *b;
-                amount_in = std::cmp::min(amount_in, max_spend);
+    // the amount we have available to spend.
 
-                // The amount we actually need to deposit may be less than the
-                // max_deposit specified in the request; we only want to deposit
-                // the very minimum.
-                if amount_in > *b {
-                    deposit = (amount_in - *b).cast(AssetId::POINTS);
-                }
+    // The maximum we can spend is the current balance of this asset, plus any
+    // we create from depositing. We already checked that we can afford the
+    // deposit if needed.
+    let max_spend = max_deposit.cast(asset_in) + user_balance_in;
+    amount_in = std::cmp::min(amount_in, max_spend);
 
-                break;
-            }
-        }
+    // The amount we actually need to deposit may be less than the max_deposit
+    // specified in the request; we only want to deposit the very minimum.
+    let mut deposit = AssetId::POINTS.zero();
+    if amount_in > user_balance_in {
+        deposit = (amount_in - user_balance_in).cast(AssetId::POINTS);
     }
 
     let amount_out = match market.trade(amount_in, min_out) {
