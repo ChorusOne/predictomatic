@@ -241,15 +241,35 @@ aside form label input {
     text-align: right;
 }
 
-.kelly-buttons {
+.bet-size-buttons {
     margin-top: 0.5rem;
     display: grid;
     grid-auto-flow: column;
     grid-column-gap: 0.5rem;
 }
 
-.kelly-buttons button {
+.bet-size-buttons.two { grid-template-columns: 1fr 1fr; }
+.bet-size-buttons.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+/* We style the buttons a bit more subtle than the default buttons style.
+   It's maybe a bit confusing, not as obvious that they are clickable, but if we
+   styled them the same, they are too distracting. They are not the main content
+   of the page, they should not immediately draw your attention. */
+.bet-size-buttons button {
+    font-size: 0.85rem;
+    font-weight: 420;
     background: transparent;
+    border: 1.5pt solid var(--fg);
+    padding: 1pt;
+    padding-top: 5pt;
+    padding-bottom: 5pt;
+}
+
+.bet-size-buttons button:active {
+    padding: 0pt;
+    padding-top: 5pt;
+    padding-bottom: 3pt;
+    border-width: 2pt;
 }
 
 .slider {
@@ -352,8 +372,9 @@ aside form label input {
     padding-left: 0;
 }
 
-#trade-offer td.amount {
-    min-width: 3.2rem;
+#trade-offer td.filler {
+    padding-left: 0;
+    width: 100%;
 }
 
 td.strong, strong {
@@ -365,10 +386,6 @@ td.strong, strong {
     height: 100%;
     /* Make it at most two lines tall, even when the table has 3 lines. */
     max-height: 3.4rem;
-}
-
-.clickable {
-    cursor: pointer;
 }
 
 /* In participant tables, mark the current user with an arrow and a slightly

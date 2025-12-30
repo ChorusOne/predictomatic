@@ -289,36 +289,22 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                                 td .num { "—%" }
                             }
                             tr {
-                                td { "1/4 Kelly" }
-                                td .num {
-                                    "$\u{200a}— of "
-                                    (market.outcomes[0].value)
-                                }
-                            }
-                            tr {
-                                td { "1/2 Kelly" }
-                                td .num #bet-sizing-b {
-                                    "$\u{200a}— of "
-                                    (market.outcomes[0].value)
-                                }
-                            }
-                            tr {
-                                td { "Full Kelly" }
+                                td { "Kelly bet" }
                                 td .num #bet-sizing-c {
                                     "$\u{200a}— of "
                                     (market.outcomes[0].value)
                                 }
                             }
                         }
-                        div .kelly-buttons {
-                            button { "1/4" br; "Kelly" }
-                            button { "1/3" br; "Kelly" }
-                            button { "1/2" br; "Kelly" }
-                            button { "2/3" br; "Kelly" }
+                        div .bet-size-buttons .four {
+                            button onclick="onClickKelly(1/5)" { "1/5" }
+                            button onclick="onClickKelly(1/4)" { "1/4" }
+                            button onclick="onClickKelly(1/3)" { "1/3" }
+                            button onclick="onClickKelly(1/2)" { "1/2" }
                         }
-                        div .kelly-buttons {
+                        div .bet-size-buttons .two {
                             button { "Neutral" }
-                            button { "Full Kelly" }
+                            button onclick="onClickKelly(1)" { "Full Kelly" }
                         }
                     }
 

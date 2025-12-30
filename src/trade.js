@@ -210,32 +210,34 @@ function updateTradeWidget(p) {
     var sellRow = effectiveSell <= 0.0 ? "" : `
     <tr>
         <td>Sell</td>
-        <td class="num amount">$\u{200a}${costPointsSell.toFixed(2)}</td>
-        <td class="at">worth of</td>
-        <td class="outcome-label">${labelSell},</td>
-        <td class="num amount">${effectiveSell.toFixed(2)}</td>
-        <td class="at">shares at</td>
-        <td class="num price">$\u{200a}${(1.0 - sharePricePoints).toFixed(2)} per share</td>
+        <td class="num">$\u{200a}${costPointsSell.toFixed(2)}</td>
+        <td>worth of</td>
+        <td>${labelSell},</td>
+        <td class="num">${effectiveSell.toFixed(2)}</td>
+        <td>shares at</td>
+        <td class="num">$\u{200a}${(1.0 - sharePricePoints).toFixed(2)} per share</td>
+        <td class="filler"></td>
     </tr>
     `;
 
     var depositRow = deposit <= 0.0 ? "" : `
     <tr>
       <td>Pay</td>
-      <td class="num amount">$\u{200a}${deposit.toFixed(2)}</td>
-      <td colspan="5"> from your liquid points</td>
+      <td class="num">$\u{200a}${deposit.toFixed(2)}</td>
+      <td colspan="6"> from your liquid points</td>
     </tr>
     `;
 
     offerTable.innerHTML = `
     <tr>
         <td>Buy</td>
-        <td class="num amount strong">$\u{200a}${costPointsBuy.toFixed(2)}</td>
-        <td class="at">worth of</td>
-        <td class="outcome-label"><strong>${labelBuy}</strong>,</td>
-        <td class="num amount">${effectiveBuy.toFixed(2)}</td>
-        <td class="at">shares at</td>
-        <td class="num price"><strong>$\u{200a}${sharePricePoints.toFixed(2)}</strong> per share</td>
+        <td class="num strong">$\u{200a}${costPointsBuy.toFixed(2)}</td>
+        <td>worth of</td>
+        <td><strong>${labelBuy}</strong>,</td>
+        <td class="num">${effectiveBuy.toFixed(2)}</td>
+        <td>shares at</td>
+        <td class="num"><strong>$\u{200a}${sharePricePoints.toFixed(2)}</strong> per share</td>
+        <td class="filler"></td>
     </tr>
     ${sellRow}
     ${depositRow}
@@ -272,16 +274,8 @@ function updateBetSizingHelp(q) {
         <td>Belief ${assetLabels[0]}</td>
         <td class="num">${(q * 100.0).toFixed(0)}%</td>
     </tr>
-    <tr onclick="onClickKelly(1/4)" class="clickable">
-        <td>1/4 Kelly</td>
-        <td class="num">$\u200a${(kellyVolume / 4).toFixed(2)} of ${labelBuy}</td>
-    </tr>
-    <tr onclick="onClickKelly(1/2)" class="clickable">
-        <td>1/2 Kelly</td>
-        <td class="num">$\u200a${(kellyVolume / 2).toFixed(2)} of ${labelBuy}</td>
-    </tr>
-    <tr onclick="onClickKelly(1)" class="clickable">
-        <td>Full Kelly</td>
+    <tr>
+        <td>Kelly bet</td>
         <td class="num">$\u200a${kellyVolume.toFixed(2)} of ${labelBuy}</td>
     </tr>
     `;
