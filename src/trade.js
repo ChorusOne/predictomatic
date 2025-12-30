@@ -185,11 +185,11 @@ function maximizeExpectedLogWealth(q) {
 // have an equal number of shares in every outcome.
 function getNeutralPositionProbability() {
     const clamp = (x, min, max) => Math.max(min, Math.min(x, max));
-    // Iterate performs one Newton-Raphson iteration; wee also
+    // Iterate performs one Newton-Raphson iteration; see also
     // `maximizeExpectedLogWealth` above.
     const iterate = p => {
-        const p0 = Math.max(p - 0.01, (p + pMin) * 0.5, pMin);
-        const p1 = Math.min(p + 0.01, (p + pMax) * 0.5, pMax);
+        const p0 = Math.max(p - 0.001, (p + pMin) * 0.5, pMin);
+        const p1 = Math.min(p + 0.001, (p + pMax) * 0.5, pMax);
 
         // Newton-Raphson finds root, in this case we want a root of the
         // difference between balances, so we only need to numerically estimate
