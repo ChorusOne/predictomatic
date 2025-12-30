@@ -183,7 +183,7 @@ function maximizeExpectedLogWealth(q) {
 
 // Return the probability `p` that we should trade to, so that at the end we
 // have an equal number of shares in every outcome.
-function getNeutralPosition() {
+function getNeutralPositionProbability() {
     const clamp = (x, min, max) => Math.max(min, Math.min(x, max));
     // Iterate performs one Newton-Raphson iteration; wee also
     // `maximizeExpectedLogWealth` above.
@@ -287,7 +287,6 @@ function updateTradeWidget(p) {
 }
 
 function updateBetSizingHelp(q) {
-    const table = document.getElementById("sizing-help");
 
     // Update the global variables with the Kelly bet for what we believe
     // is the true probability of outcome 0.
@@ -298,33 +297,26 @@ function updateBetSizingHelp(q) {
     const labelBuy = assetLabels[kellyBet.assetBuy];
     const kellyVolume = kellyBet.volumePoints;
 
-    const pNeutral = getNeutralPosition();
+    const pNeutral = getNeutralPositionProbability();
     const neutralBase = getTrade(pNeutral);
     const neutralBet = getTradeDetails(neutralBase);
     const neutralVolume = neutralBet.volumePoints;
     const neutralPnL = neutralBase.userBalance[0] - userDeposited;
 
-    table.innerHTML = `
+    document.getElementById("sizing-help-kelly").innerHTML = `
     <tr>
         <td>Belief ${assetLabels[0]}</td>
-        <td class="num">${(q * 100.0).toFixed(0)}%</td>
+        <td class="num">${(q * 100.0).toFixed(1)}%</td>
     </tr>
     <tr title="The trade that maximizes your expected log-wealth.">
         <td>Kelly bet</td>
         <td class="num">$\u200a${kellyVolume.toFixed(2)} of ${assetLabels[kellyBet.assetBuy]}</td>
     </tr>
-    <tr title="The trade that exits to a neutral position, to realize profits and loss.">
-        <td>Neutral</td>
+    <tr title="The trade that exits to an outcome-neutral position.">
+        <td>Neutral bet</td>
         <td class="num">$\u200a${neutralVolume.toFixed(2)} of ${assetLabels[neutralBet.assetBuy]}</td>
     </tr>
-    <tr title="The profit you realize when you execute the trade to a neutral position.">
-        <td>Neutral PnL</td>
-        <td class="num">$\u200a${neutralPnL.toFixed(2)}</td>
-    </tr>
     `;
-
-    // TODO: Add a neutral row as well, to suggest the trade that exits to a
-    // neutal position.
 }
 
 // Given a fraction, return the probability that we should trade to so that the
@@ -446,6 +438,12 @@ function initialize() {
 
         document.onClickKelly = (fraction) => {
             selectedProbability = getFractionalKellyProbability(fraction);
+            positionSlider(selectedProbability);
+            updateTradeWidget(selectedProbability);
+        };
+
+        document.onClickNeutral = () => {
+            selectedProbability = getNeutralPositionProbability();
             positionSlider(selectedProbability);
             updateTradeWidget(selectedProbability);
         };

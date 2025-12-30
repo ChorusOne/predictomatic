@@ -287,7 +287,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
 
                     @if market.is_open() {
                         h3 { "Bet sizing help "}
-                        table #sizing-help {
+                        table #sizing-help-kelly {
                             tr {
                                 td { "Belief " (market.outcomes[0].value) }
                                 td .num { "—%" }
@@ -300,15 +300,37 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                                 }
                             }
                         }
-                        div .bet-size-buttons .four {
-                            button onclick="onClickKelly(1/5)" { "1/5" }
-                            button onclick="onClickKelly(1/4)" { "1/4" }
-                            button onclick="onClickKelly(1/3)" { "1/3" }
-                            button onclick="onClickKelly(1/2)" { "1/2" }
+                        div .bet-size-buttons {
+                            button
+                                onclick="onClickKelly(1/5)"
+                                title="Select a trade that trades a fifth of the Kelly bet."
+                                { "1/5" }
+                            button
+                                onclick="onClickKelly(1/4)"
+                                title="Select a trade that trades a quarter of the Kelly bet."
+                                { "1/4" }
+                            button
+                                onclick="onClickKelly(1/3)"
+                                title="Select a trade that trades a third of the Kelly bet."
+                                { "1/3" }
+                            button
+                                onclick="onClickKelly(1/2)"
+                                title="Select a trade that trades half of the Kelly bet."
+                                { "1/2" }
+                            button
+                                onclick="onClickKelly(1)"
+                                title="Select the trade that trades the Kelly bet, “Full Kelly”."
+                                { "Full" }
                         }
-                        div .bet-size-buttons .two {
-                            button { "Neutral" }
-                            button onclick="onClickKelly(1)" { "Full Kelly" }
+                        div .bet-size-buttons {
+                            button
+                                .button-neutral
+                                onclick="onClickNeutral()"
+                                title={
+                                    "Select the trade that exits to an outcome-neutral position.\n"
+                                    "This effectively realizes profits and losses."
+                                  }
+                                { "Neutral" }
                         }
                     }
 

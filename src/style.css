@@ -242,14 +242,17 @@ aside form label input {
 }
 
 .bet-size-buttons {
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
     display: grid;
     grid-auto-flow: column;
     grid-column-gap: 0.5rem;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
 }
 
-.bet-size-buttons.two { grid-template-columns: 1fr 1fr; }
-.bet-size-buttons.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.button-neutral {
+    grid-column: 1 / 6;
+}
 
 /* We style the buttons a bit more subtle than the default buttons style.
    It's maybe a bit confusing, not as obvious that they are clickable, but if we
