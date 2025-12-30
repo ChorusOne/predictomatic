@@ -68,7 +68,9 @@ function getTradeDetails(trade) {
     let result = null;
 
     do {
-        if (trade.userDelta[0] > 0.01) {
+        // We don't want to let the user do tiny trades. After rounding to 2
+        // decimals, we must trade more than 0.01 of each asset.
+        if (trade.userDelta[0] > 0.015 && trade.userDelta[1] < 0.015) {
             result = {
                 assetBuy: 0,
                 assetSell: 1,
@@ -80,7 +82,7 @@ function getTradeDetails(trade) {
             break;
         }
 
-        if (trade.userDelta[1] > 0.01) {
+        if (trade.userDelta[1] > 0.015 && trade.userDelta[0] < 0.015) {
             result = {
                 assetBuy: 1,
                 assetSell: 0,
