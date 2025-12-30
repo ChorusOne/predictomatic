@@ -175,6 +175,12 @@ fn view_prediction_binary(
                 }
             }
         }
+        p #trade-warning {
+            input type="checkbox" id="trade-warning-acknowledge";
+            label for="trade-warning-acknowledge" {
+                " I really want to spend more than half of my available points in a single trade."
+            }
+        }
     }
 }
 
@@ -343,21 +349,18 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                     }
                 }
             }
-            script {
-                @if market.is_open() {
-                    "const isOpen = true;\n"
-                } @else {
-                    "const isOpen = false;\n"
+            @if market.is_open() {
+                script {
+                    "const userLiquidPoints = " (ctx.user_points) ";\n"
+                    "const userDeposited = " (deposited) ";\n"
+                    "const systemBalance = [" @for b in balance_system { (b) ", " } "];\n"
+                    "const userBalance = [" @for b in balance_user { (b) ", " } "];\n"
+                    "const assetIds = [" @for oc in &market.outcomes { (oc.id.0) ", " } "];\n"
+                    // TODO: Properly serialize the strings as json, Rust's Debug is nto the same!
+                    // Also it now contains a glaring injection vulnerability.
+                    "const assetLabels = [" @for oc in &market.outcomes { (maud::PreEscaped(format!("{:?}", oc.value))) ", " } "];\n"
+                    (get_trade_script())
                 }
-                "const userLiquidPoints = " (ctx.user_points) ";\n"
-                "const userDeposited = " (deposited) ";\n"
-                "const systemBalance = [" @for b in balance_system { (b) ", " } "];\n"
-                "const userBalance = [" @for b in balance_user { (b) ", " } "];\n"
-                "const assetIds = [" @for oc in &market.outcomes { (oc.id.0) ", " } "];\n"
-                // TODO: Properly serialize the strings as json, Rust's Debug is nto the same!
-                // Also it now contains a glaring injection vulnerability.
-                "const assetLabels = [" @for oc in &market.outcomes { (maud::PreEscaped(format!("{:?}", oc.value))) ", " } "];\n"
-                (get_trade_script())
             }
         }
     }

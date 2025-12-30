@@ -269,6 +269,7 @@ function updateTradeWidget(p) {
     </tr>
     `;
 
+
     offerTable.innerHTML = `
     <tr>
         <td>Buy</td>
@@ -293,8 +294,19 @@ function updateTradeWidget(p) {
         document.trade_form.min_out.value = (trade.amountBuy * 0.98).toFixed(6);
     }
 
+    // For trades that include a large deposit, ask the user to confirm.
+    const isRisky = deposit > userLiquidPoints * 0.5;
+    const warningElement = document.getElementById("trade-warning");
+    const warningAckBox = document.getElementById("trade-warning-acknowledge");
+    if (isRisky) {
+        warningElement.classList.add("enabled");
+    } else {
+        warningElement.classList.remove("enabled");
+    }
+
+    const canSubmit = trade.valid && (warningAckBox.checked || !isRisky);
     const submitButton = document.getElementById("trade-submit");
-    submitButton.disabled = !trade.valid;
+    submitButton.disabled = !canSubmit;
 }
 
 function updateBetSizingHelp(q) {
@@ -433,9 +445,18 @@ function initialize() {
         if (isOpen) positionSlider(selectedProbability);
     };
 
+    // For trades that spend a large amount of the available balance, we have
+    // a checkbox to acknowledge that. If the user toggles it, we have to also
+    // change the enabled state of the trade button, the simplest way is to just
+    // refresh the entire trade widget.
+    const onToggleAck = (event) => updateTradeWidget(selectedProbability);
+
     if (canTrade) {
         knob.addEventListener("mousedown", onDragStart);
         knob.addEventListener("touchstart", onDragStart);
+
+        const warningAckBox = document.getElementById("trade-warning-acknowledge");
+        warningAckBox.addEventListener("change", onToggleAck);
 
         document.onClickKelly = (fraction) => {
             selectedProbability = getFractionalKellyProbability(fraction);
@@ -466,12 +487,8 @@ function initialize() {
     const p = getProbability(systemBalance);
     setPercentage(tMarket, pMarket, p);
     setPercentage(tUser, pUser, p);
-    if (isOpen) {
-        positionSlider(p);
-        updateBetSizingHelp(p);
-    } else {
-        knob.parentElement.removeChild(knob);
-    }
+    positionSlider(p);
+    updateBetSizingHelp(p);
 
     window.addEventListener("resize", onResize);
 }
