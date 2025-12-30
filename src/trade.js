@@ -207,7 +207,7 @@ function updateTradeWidget(p) {
     const costPointsBuy = effectiveBuy * sharePricePoints;
     const costPointsSell = effectiveSell * (1.0 - sharePricePoints);
 
-    var sellRow = effectiveSell === 0.0 ? "" : `
+    var sellRow = effectiveSell <= 0.0 ? "" : `
     <tr>
         <td>Sell</td>
         <td class="num amount">$\u{200a}${costPointsSell.toFixed(2)}</td>
@@ -219,7 +219,7 @@ function updateTradeWidget(p) {
     </tr>
     `;
 
-    var depositRow = deposit === 0.0 ? "" : `
+    var depositRow = deposit <= 0.0 ? "" : `
     <tr>
       <td>Pay</td>
       <td class="num amount">$\u{200a}${deposit.toFixed(2)}</td>
