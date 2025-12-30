@@ -324,7 +324,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                         }
                         div .bet-size-buttons {
                             button
-                                .button-neutral
+                                #button-neutral
                                 onclick="onClickNeutral()"
                                 title={
                                     "Select the trade that exits to an outcome-neutral position.\n"

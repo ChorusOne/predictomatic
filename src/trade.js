@@ -211,6 +211,17 @@ function getNeutralPositionProbability() {
     return p;
 }
 
+// Return the PnL that we would realize when we exit to the neutral position.
+//
+// This is less than the "Unrealized PnL" that the "Your balance" table displays
+// due to slippage of the trade.
+function getNeutralPositionProfit() {
+    const p = getNeutralPositionProbability();
+    const base = getTrade(p);
+    const trade = getTradeDetails(base);
+    return base.userBalance[0] - userDeposited;
+}
+
 // Prepare a trade offer, such that after the trade, the market's implied
 // probability is `p`.
 function updateTradeWidget(p) {
@@ -287,7 +298,6 @@ function updateTradeWidget(p) {
 }
 
 function updateBetSizingHelp(q) {
-
     // Update the global variables with the Kelly bet for what we believe
     // is the true probability of outcome 0.
     const pKelly = maximizeExpectedLogWealth(q);
@@ -297,12 +307,6 @@ function updateBetSizingHelp(q) {
     const labelBuy = assetLabels[kellyBet.assetBuy];
     const kellyVolume = kellyBet.volumePoints;
 
-    const pNeutral = getNeutralPositionProbability();
-    const neutralBase = getTrade(pNeutral);
-    const neutralBet = getTradeDetails(neutralBase);
-    const neutralVolume = neutralBet.volumePoints;
-    const neutralPnL = neutralBase.userBalance[0] - userDeposited;
-
     document.getElementById("sizing-help-kelly").innerHTML = `
     <tr>
         <td>Belief ${assetLabels[0]}</td>
@@ -311,10 +315,6 @@ function updateBetSizingHelp(q) {
     <tr title="The trade that maximizes your expected log-wealth.">
         <td>Kelly bet</td>
         <td class="num">$\u200a${kellyVolume.toFixed(2)} of ${assetLabels[kellyBet.assetBuy]}</td>
-    </tr>
-    <tr title="The trade that exits to an outcome-neutral position.">
-        <td>Neutral bet</td>
-        <td class="num">$\u200a${neutralVolume.toFixed(2)} of ${assetLabels[neutralBet.assetBuy]}</td>
     </tr>
     `;
 }
@@ -447,6 +447,19 @@ function initialize() {
             positionSlider(selectedProbability);
             updateTradeWidget(selectedProbability);
         };
+
+        // On the button that selects the neutral position, update the label
+        // to also say how much profit or loss that will realize.
+        if (userDeposited > 0.0) {
+            const neutralPnL = getNeutralPositionProfit();
+            const neutralLabel =
+                neutralPnL > 0.0
+                ? `${neutralPnL.toFixed(2)} profit`
+                : `${(-neutralPnL).toFixed(2)} loss`;
+
+            document.getElementById("button-neutral").innerText =
+                `Neutral, take $\u200a${neutralLabel}`;
+        }
     }
 
     const p = getProbability(systemBalance);

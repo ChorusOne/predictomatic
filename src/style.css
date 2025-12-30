@@ -250,7 +250,7 @@ aside form label input {
     grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
 }
 
-.button-neutral {
+#button-neutral {
     grid-column: 1 / 6;
 }
 
@@ -263,15 +263,15 @@ aside form label input {
     font-weight: 420;
     background: transparent;
     border: 1.5pt solid var(--fg);
-    padding: 1pt;
+    padding: 0.5pt;
     padding-top: 5pt;
     padding-bottom: 5pt;
 }
 
 .bet-size-buttons button:active {
-    padding: 0pt;
-    padding-top: 5pt;
-    padding-bottom: 3pt;
+    padding: 0;
+    padding-top: 5.5pt;
+    padding-bottom: 3.5pt;
     border-width: 2pt;
 }
 
