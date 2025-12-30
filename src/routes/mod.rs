@@ -255,7 +255,6 @@ pub fn handle_post(
     body: &str,
 ) -> Result<Response> {
     match path {
-        ["market", market_slug, "deposit"] => market::handle_deposit(tx, ctx, market_slug, body),
         ["market", market_slug, "trade"] => market::handle_trade(tx, ctx, market_slug, body),
         ["market", market_slug, "resolve", outcome] => {
             market::handle_resolve(tx, ctx, market_slug, outcome)

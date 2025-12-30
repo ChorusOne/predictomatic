@@ -10,7 +10,6 @@ use maud::{Markup, html};
 use crate::Response;
 use crate::database as db;
 use crate::model::{self, Amount, AssetId, Balance, Market, RealizedProfit};
-use crate::routes::util;
 use crate::routes::{
     Context, Result, redirect_see_other, respond_html, view_header, view_html_head,
 };
@@ -386,18 +385,6 @@ pub fn handle_market(
     let market = get_market_by_slug(tx, ctx, market_slug)?;
     let body = view_market(ctx, &market);
     Ok(respond_html(body))
-}
-
-pub fn handle_deposit(
-    tx: &mut db::Transaction,
-    ctx: &Context,
-    market_slug: &str,
-    body: &str,
-) -> Result<Response> {
-    let market = get_market_by_slug(tx, ctx, market_slug)?;
-    let amount = util::parse_form_amount(ctx, body)?;
-    model::create_deposit(tx, &market, amount, ctx.user_email)?;
-    Ok(redirect_see_other(ctx.market_url(&market, "")))
 }
 
 pub fn handle_trade(
