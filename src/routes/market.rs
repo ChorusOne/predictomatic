@@ -134,12 +134,7 @@ fn view_resolution(market: &Market) -> Markup {
     }
 }
 
-fn view_prediction_binary(
-    ctx: &Context,
-    market: &Market,
-    ps: &[f64],
-    user_position: Option<&MarketPosition>,
-) -> Markup {
+fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup {
     // The convention is that the first outcome is the positive one.
     let p = ps[0];
     let percentage = format!("{:.1}%", p * 100.0);
@@ -268,7 +263,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                 section {
                     h1 { (market.title) }
                     @match market.is_open() {
-                        true => (view_prediction_binary(ctx, market, &ps, our_position)),
+                        true => (view_prediction_binary(ctx, market, &ps)),
                         false => (view_resolution(market)),
                     }
                     h2 { "Resolution criteria" }
