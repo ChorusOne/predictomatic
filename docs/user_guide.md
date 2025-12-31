@@ -61,9 +61,9 @@ There are two ways to pay for that order.
 If you already own outcome shares in the opposite outcome,
 you can sell those.
 If you have not participated in the market before,
-you can <em>deposit</em> to create new outcome shares.
+you can <a href="#deposits"><em>deposit</em></a> to create new outcome shares.
 The system selects the optimal way to finance the order for you.
-It will sell outcome shares before spending liquid points.
+It will sell outcome shares before spending points.
 
 When you trade,
 this changes the market price of outcome shares,
@@ -81,17 +81,17 @@ When your belief about an outcome differs from the market price,
 you can trade for an expected profit.
 For example,
 if you believe that there is an 80% probability that the market will resolve ‘Yes’,
-that corresponds to a price of $0.80.
+that corresponds to a price of $0.80 per Yes share.
 If the current market price for Yes shares is $0.60,
 they are effectively on discount to you.
 Suppose you spend $7 to buy 10 Yes shares,
 and that trade moves the market price from $0.60 to $0.80.
-You believe that when the market resolves,
+When the market resolves,
 with 80% probability you get $10 (a profit of $3);
 with 20% probability you get $0 (a loss of $7).
 Your expected profit is therefore 0.8&nbsp;×&nbsp;$3 – 0.2&nbsp;×&nbsp;$7 = $1.
 
-Note that this $1 “expected profit” is merely a <em>statistical tool</em>.
+Note that this $1 “expected profit” is merely a statistical tool.
 There is not actually an outcome where you make $1 profit!
 You either make a $3 profit, or a $7 loss.
 In particular,
@@ -154,6 +154,9 @@ By depositing points, you create an equal amount of shares in every outcome.
 For instance,
 if you deposit $10 into the example market described earlier,
 you get 10 Yes + 10 No.
+(When you deposit as part of a trade,
+you then immediately swap the unwanted shares for more of the desired ones,
+in a single transaction.)
 When the market resolves as Yes,
 that $10 is paid out to the holders of the Yes shares;
 when it resolves No the $10 is paid to No holders.
