@@ -10,7 +10,6 @@ use maud::{Markup, html};
 use crate::Response;
 use crate::database as db;
 use crate::model::{self, Amount, AssetId, Balance, Market, RealizedProfit};
-use crate::routes::util;
 use crate::routes::{
     Context, Result, redirect_see_other, respond_html, view_header, view_html_head,
 };
@@ -135,12 +134,7 @@ fn view_resolution(market: &Market) -> Markup {
     }
 }
 
-fn view_prediction_binary(
-    ctx: &Context,
-    market: &Market,
-    ps: &[f64],
-    user_position: Option<&MarketPosition>,
-) -> Markup {
+fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup {
     // The convention is that the first outcome is the positive one.
     let p = ps[0];
     let percentage = format!("{:.1}%", p * 100.0);
@@ -155,30 +149,31 @@ fn view_prediction_binary(
             span .knob .disabled {}
         }
         noscript { "You need to enable Javascript to trade." }
-        @if user_position.is_some() {
-            div #trade-offer {
-                h3 { "Trade offer" }
-                // The JS replaces the contents of the table when dragging the slider.
-                div {
-                    table {
-                        tr {
-                            td {
-                                "Move the slider to receive a trade offer."
-                            }
+        div #trade-offer {
+            h3 { a href={(ctx.prefix) "/help#trading"} { "Trade" } }
+            // The JS replaces the contents of the table when dragging the slider.
+            div {
+                table {
+                    tr {
+                        td {
+                            "Move the slider to trade."
                         }
                     }
-                    form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
-                        input type="hidden" name="amount_in" value="0";
-                        input type="hidden" name="min_out" value="0";
-                        input type="hidden" name="asset_in" value="0";
-                        input type="hidden" name="asset_out" value="0";
-                        button #trade-submit type="submit" disabled { "Trade" }
-                    }
+                }
+                form name="trade_form" method="post" action=(ctx.market_url(market, "/trade")) {
+                    input type="hidden" name="amount_in" value="0";
+                    input type="hidden" name="min_out" value="0";
+                    input type="hidden" name="asset_in" value="0";
+                    input type="hidden" name="asset_out" value="0";
+                    input type="hidden" name="max_deposit" value="0";
+                    button #trade-submit type="submit" disabled { "Trade" }
                 }
             }
-        } @else {
-            p {
-                "To start trading, deposit some funds on the right."
+        }
+        p #trade-warning {
+            input type="checkbox" id="trade-warning-acknowledge";
+            label for="trade-warning-acknowledge" {
+                " I really want to spend more than half of my available points in a single trade."
             }
         }
     }
@@ -199,23 +194,6 @@ fn view_market_admin(ctx: &Context, market: &Market) -> Markup {
                     "Resolve " (outcome.value)
                 }
             }
-        }
-    }
-}
-
-fn view_market_deposit_aside(ctx: &Context, market: &Market) -> Markup {
-    let default_deposit = AssetId::POINTS.micros(10_000_000).min(ctx.user_points);
-    html! {
-        h3 { "Deposit" }
-        form method="post" action=(ctx.market_url(market, "/deposit")) {
-            label {
-                "Amount "
-                input
-                    #input-deposit-amount
-                    name="amount"
-                    value=(format!("${default_deposit:.2}"));
-            }
-            button #button-deposit type="submit" { "Deposit" }
         }
     }
 }
@@ -250,6 +228,10 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
         .find(|pos| pos.owner == "SYSTEM")
         .expect("System always has a position.");
 
+    let deposited = our_position
+        .map(|p| p.balance.points)
+        .unwrap_or(AssetId::POINTS.zero());
+
     // We also feed in the serialized current positions into js.
     // TODO: Use serde_json or something instead.
     let balance_user: Vec<String> = match our_position {
@@ -281,7 +263,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                 section {
                     h1 { (market.title) }
                     @match market.is_open() {
-                        true => (view_prediction_binary(ctx, market, &ps, our_position)),
+                        true => (view_prediction_binary(ctx, market, &ps)),
                         false => (view_resolution(market)),
                     }
                     h2 { "Resolution criteria" }
@@ -305,7 +287,53 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                     }
 
                     @if market.is_open() {
-                        (view_market_deposit_aside(ctx, market))
+                        h3 {
+                            a href={(ctx.prefix) "/help#bet-sizing"} {
+                                "Bet sizing help"
+                            }
+                        }
+                        table #sizing-help {
+                            tr {
+                                td { "Belief " (market.outcomes[0].value) }
+                                td .num { "—%" }
+                            }
+                            tr {
+                                td { "Kelly bet" }
+                                td .num { "$\u{200a}— of " (market.outcomes[0].value) }
+                            }
+                        }
+                        div .bet-size-buttons {
+                            button
+                                onclick="onClickKelly(1/5)"
+                                title="Select a trade that trades a fifth of the Kelly bet."
+                                { "1/5" }
+                            button
+                                onclick="onClickKelly(1/4)"
+                                title="Select a trade that trades a quarter of the Kelly bet."
+                                { "1/4" }
+                            button
+                                onclick="onClickKelly(1/3)"
+                                title="Select a trade that trades a third of the Kelly bet."
+                                { "1/3" }
+                            button
+                                onclick="onClickKelly(1/2)"
+                                title="Select a trade that trades half of the Kelly bet."
+                                { "1/2" }
+                            button
+                                onclick="onClickKelly(1)"
+                                title="Select the trade that trades the Kelly bet, “Full Kelly”."
+                                { "Full" }
+                        }
+                        div .bet-size-buttons {
+                            button
+                                #button-neutral
+                                onclick="onClickNeutral()"
+                                title={
+                                    "Select the trade that exits to an outcome-neutral position.\n"
+                                    "This effectively realizes profits and losses."
+                                  }
+                                { "Neutral" }
+                        }
                     }
 
                     @if ctx.is_admin && market.is_open() {
@@ -313,20 +341,18 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                     }
                 }
             }
-            script {
-                @if market.is_open() {
-                    "const isOpen = true;\n"
-                } @else {
-                    "const isOpen = false;\n"
+            @if market.is_open() {
+                script {
+                    "const userLiquidPoints = " (ctx.user_points) ";\n"
+                    "const userDeposited = " (deposited) ";\n"
+                    "const systemBalance = [" @for b in balance_system { (b) ", " } "];\n"
+                    "const userBalance = [" @for b in balance_user { (b) ", " } "];\n"
+                    "const assetIds = [" @for oc in &market.outcomes { (oc.id.0) ", " } "];\n"
+                    // TODO: Properly serialize the strings as json, Rust's Debug is nto the same!
+                    // Also it now contains a glaring injection vulnerability.
+                    "const assetLabels = [" @for oc in &market.outcomes { (maud::PreEscaped(format!("{:?}", oc.value))) ", " } "];\n"
+                    (get_trade_script())
                 }
-                "const userLiquidPoints = " (ctx.user_points) ";\n"
-                "const systemBalance = [" @for b in balance_system { (b) ", " } "];\n"
-                "const userBalance = [" @for b in balance_user { (b) ", " } "];\n"
-                "const assetIds = [" @for oc in &market.outcomes { (oc.id.0) ", " } "];\n"
-                // TODO: Properly serialize the strings as json, Rust's Debug is nto the same!
-                // Also it now contains a glaring injection vulnerability.
-                "const assetLabels = [" @for oc in &market.outcomes { (maud::PreEscaped(format!("{:?}", oc.value))) ", " } "];\n"
-                (get_trade_script())
             }
         }
     }
@@ -353,18 +379,6 @@ pub fn handle_market(
     Ok(respond_html(body))
 }
 
-pub fn handle_deposit(
-    tx: &mut db::Transaction,
-    ctx: &Context,
-    market_slug: &str,
-    body: &str,
-) -> Result<Response> {
-    let market = get_market_by_slug(tx, ctx, market_slug)?;
-    let amount = util::parse_form_amount(ctx, body)?;
-    model::create_deposit(tx, &market, amount, ctx.user_email)?;
-    Ok(redirect_see_other(ctx.market_url(&market, "")))
-}
-
 pub fn handle_trade(
     tx: &mut db::Transaction,
     ctx: &Context,
@@ -379,6 +393,7 @@ pub fn handle_trade(
     let mut min_out_str = None;
     let mut asset_in = AssetId::POINTS;
     let mut asset_out = AssetId::POINTS;
+    let mut max_deposit = AssetId::POINTS.zero();
 
     for (key, value) in form_urlencoded::parse(body.as_bytes()) {
         match key.as_ref() {
@@ -392,6 +407,10 @@ pub fn handle_trade(
             "asset_out" => match i64::from_str(value.as_ref()) {
                 Ok(n) => asset_out = AssetId(n),
                 Err(..) => return ctx.bad_request("Invalid asset id for asset_out."),
+            },
+            "max_deposit" => match AssetId::POINTS.parse_amount(value.as_ref()) {
+                Some(n) => max_deposit = n,
+                None => return ctx.bad_request("Invalid max_deposit amount."),
             },
             _ => return ctx.bad_request("Unexpected form data."),
         }
@@ -427,18 +446,42 @@ pub fn handle_trade(
         ));
     }
 
+    if max_deposit > ctx.user_points {
+        return ctx.bad_request(format!(
+            "This trade includes a deposit of {} points, but you have only {}.",
+            max_deposit, ctx.user_points,
+        ));
+    }
+
+    // Get the the user's current balance of the in asset. It may not exist when
+    // the user does not have an account yet. Then the balance is zero.
+    let mut user_balance_in = asset_in.zero();
+    if let Some(user_balance) = market.balances.get(ctx.user_email) {
+        for b in &user_balance.outcomes {
+            if b.1 == amount_in.1 {
+                user_balance_in = *b;
+                break;
+            }
+        }
+    }
+
     // Due to the way the frontend computes amount_in, it may overestimate the
     // amount it wants to trade by a slight amount, and that then causes an
     // constraint violation due to trying to trade more than the available
     // balance. For small differences we can fix that by limiting amount_in to
     // the amount we have available to spend.
-    if let Some(user_balance) = market.balances.get(ctx.user_email) {
-        for b in &user_balance.outcomes {
-            if b.1 == amount_in.1 {
-                amount_in = std::cmp::min(amount_in, *b);
-                break;
-            }
-        }
+
+    // The maximum we can spend is the current balance of this asset, plus any
+    // we create from depositing. We already checked that we can afford the
+    // deposit if needed.
+    let max_spend = max_deposit.cast(asset_in) + user_balance_in;
+    amount_in = std::cmp::min(amount_in, max_spend);
+
+    // The amount we actually need to deposit may be less than the max_deposit
+    // specified in the request; we only want to deposit the very minimum.
+    let mut deposit = AssetId::POINTS.zero();
+    if amount_in > user_balance_in {
+        deposit = (amount_in - user_balance_in).cast(AssetId::POINTS);
     }
 
     let amount_out = match market.trade(amount_in, min_out) {
@@ -454,9 +497,12 @@ pub fn handle_trade(
     };
 
     println!(
-        "Trading in market {}: {:?}:{amount_in} -> {:?}:{amount_out}",
+        "Trading in market {}: {:?}:{amount_in} -> {:?}:{amount_out}, deposit {deposit}",
         market.slug, asset_in, asset_out
     );
+    if deposit > AssetId::POINTS.zero() {
+        model::create_deposit(tx, &market, deposit, ctx.user_email)?;
+    }
     model::create_trade(tx, &market, amount_in, amount_out, ctx.user_email)?;
 
     Ok(redirect_see_other(ctx.market_url(&market, "")))
