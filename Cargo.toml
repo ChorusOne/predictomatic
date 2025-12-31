@@ -1,6 +1,6 @@
 [package]
 name = "predictomatic"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 authors = ["Chorus One <tech@chorus.one>"]
 license = "Apache-2.0"
