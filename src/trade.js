@@ -194,7 +194,7 @@ function getNeutralPositionProbability() {
         const p0 = Math.max(p - 0.001, (p + pMin) * 0.5, pMin);
         const p1 = Math.min(p + 0.001, (p + pMax) * 0.5, pMax);
 
-        // Newton-Raphson finds root, in this case we want a root of the
+        // Newton-Raphson finds roots, in this case we want a root of the
         // difference between balances, so we only need to numerically estimate
         // the first derivative.
         const t0 = getTrade(p0);
@@ -220,9 +220,8 @@ function getNeutralPositionProbability() {
 // due to slippage of the trade.
 function getNeutralPositionProfit() {
     const p = getNeutralPositionProbability();
-    const base = getTrade(p);
-    const trade = getTradeDetails(base);
-    return base.userBalance[0] - userDeposited;
+    const trade = getTrade(p);
+    return trade.userBalance[0] - userDeposited;
 }
 
 // Prepare a trade offer, such that after the trade, the market's implied
@@ -315,9 +314,8 @@ function updateTradeWidget(p) {
 function updateBetSizingHelp(q) {
     // Update the global variables with the Kelly bet for what we believe
     // is the true probability of outcome 0.
-    const pKelly = maximizeExpectedLogWealth(q);
-    kellyBet = getTradeDetails(getTrade(pKelly));
-    kellyProbability = pKelly;
+    kellyProbability = maximizeExpectedLogWealth(q);
+    kellyBet = getTradeDetails(getTrade(kellyProbability));
 
     const labelBuy = assetLabels[kellyBet.assetBuy];
     const kellyVolume = kellyBet.volumePoints;
