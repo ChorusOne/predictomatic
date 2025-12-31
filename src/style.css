@@ -34,6 +34,11 @@ a {
     text-decoration: none;
 }
 
+section > p > a {
+    text-decoration: underline;
+    text-underline-offset: 1.5pt;
+}
+
 nav, .main, .main-error {
     min-width: 35em;
     max-width: 52em;

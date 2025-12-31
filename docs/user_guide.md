@@ -55,7 +55,8 @@ therefore a basket with one share in every outcome is worth $1.
 You can trade in a market by moving the probability slider
 and then clicking the ‘Trade’ button to confirm the trade.
 When you trade,
-you buy outcome shares from an <em>automated market maker</em> (see below).
+you buy outcome shares from an <em>automated market maker</em>
+(see <a href="#automated-market-maker">below</a>).
 There are two ways to pay for that order.
 If you already own outcome shares in the opposite outcome,
 you can sell those.
@@ -103,7 +104,8 @@ The trade that maximizes your expected profit is to buy shares
 until their marginal price matches what you believe is the true probability.
 This strategy is optimal when you have infinite money to spend,
 but it’s reckless when your bank account is finite.
-As shown above, even when your expected profit is positive,
+As shown <a href="#making-a-profit">above</a>,
+even when your expected profit is positive,
 you can be unlucky and suffer a loss.
 This can lead to <em>ruin</em>:
 when you are bankrupt, you don’t get to trade again.
