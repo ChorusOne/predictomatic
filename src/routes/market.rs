@@ -292,17 +292,14 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                                 "Bet sizing help"
                             }
                         }
-                        table #sizing-help-kelly {
+                        table #sizing-help {
                             tr {
                                 td { "Belief " (market.outcomes[0].value) }
                                 td .num { "—%" }
                             }
                             tr {
                                 td { "Kelly bet" }
-                                td .num #bet-sizing-c {
-                                    "$\u{200a}— of "
-                                    (market.outcomes[0].value)
-                                }
+                                td .num { "$\u{200a}— of " (market.outcomes[0].value) }
                             }
                         }
                         div .bet-size-buttons {
@@ -456,8 +453,8 @@ pub fn handle_trade(
         ));
     }
 
-    // Get the the user's current balance of the in asset. It may not exict when
-    // the user does not have an account yet, then the balance is zero.
+    // Get the the user's current balance of the in asset. It may not exist when
+    // the user does not have an account yet. Then the balance is zero.
     let mut user_balance_in = asset_in.zero();
     if let Some(user_balance) = market.balances.get(ctx.user_email) {
         for b in &user_balance.outcomes {

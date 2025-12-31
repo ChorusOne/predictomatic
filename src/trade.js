@@ -321,7 +321,7 @@ function updateBetSizingHelp(q) {
     const labelBuy = assetLabels[kellyBet.assetBuy];
     const kellyVolume = kellyBet.volumePoints;
 
-    document.getElementById("sizing-help-kelly").innerHTML = `
+    document.getElementById("sizing-help").innerHTML = `
     <tr title="Your estimate of the probability that the market resolves ${assetLabels[0]},
 for the purpose of the Kelly computation.">
         <td>Belief ${assetLabels[0]}</td>
