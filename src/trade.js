@@ -67,37 +67,35 @@ function getTradeDetails(trade) {
     const price0 = 1.0 / (ratio + 1.0);
     let result = null;
 
-    do {
-        // We don't want to let the user do tiny trades. After rounding to 2
-        // decimals, we must trade more than 0.01 of each asset.
-        if (trade.userDelta[0] > 0.015 && trade.userDelta[1] < 0.015) {
-            result = {
-                assetBuy: 0,
-                assetSell: 1,
-                amountBuy: trade.userDelta[0],
-                amountSell: -trade.userDelta[1],
-                sharePricePoints: price0,
-                valid: true,
-            };
-            break;
-        }
+    // We don't want to let the user do tiny trades. After rounding to 2
+    // decimals, we must trade more than 0.01 of each asset.
+    if (trade.userDelta[0] > 0.015 && trade.userDelta[1] < 0.015) {
+        result = {
+            assetBuy: 0,
+            assetSell: 1,
+            amountBuy: trade.userDelta[0],
+            amountSell: -trade.userDelta[1],
+            sharePricePoints: price0,
+            valid: true,
+        };
+    }
 
-        if (trade.userDelta[1] > 0.015 && trade.userDelta[0] < 0.015) {
-            result = {
-                assetBuy: 1,
-                assetSell: 0,
-                amountBuy: trade.userDelta[1],
-                amountSell: -trade.userDelta[0],
-                sharePricePoints: 1.0 - price0,
-                valid: true,
-            };
-            break;
-        }
+    if (trade.userDelta[1] > 0.015 && trade.userDelta[0] < 0.015) {
+        result = {
+            assetBuy: 1,
+            assetSell: 0,
+            amountBuy: trade.userDelta[1],
+            amountSell: -trade.userDelta[0],
+            sharePricePoints: 1.0 - price0,
+            valid: true,
+        };
+    }
 
-        // If the slider goes past the current market state, there is nothing to
-        // buy or sell, so we don't have a trade. But if we would hide the table,
-        // that's visually very jarring, so instead we pretend to buy 0.0 of
-        // asset 0.
+    // If the slider goes past the current market state, there is nothing to
+    // buy or sell, so we don't have a trade. But if we would hide the table,
+    // that's visually very jarring, so instead we pretend to buy 0.0 of
+    // asset 0.
+    if (result === null) {
         result = {
             assetBuy: 0,
             assetSell: 1,
@@ -109,7 +107,6 @@ function getTradeDetails(trade) {
             valid: false,
         };
     }
-    while (false);
 
     // The volume for the purpose of Kelly computations etc. on this page, is
     // including deposit. It's about what we buy, not about how we finance it.
