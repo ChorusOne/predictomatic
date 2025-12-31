@@ -61,7 +61,7 @@ fn get_help_sections(points: &str) -> Vec<HelpSection> {
                 push_section(&mut result, title, &mut body);
                 title = &line[3..];
             }
-            Some(line) if line.is_empty() => {
+            Some("") => {
                 // A blank line signals the start of a new paragraph.
                 push_drain_paragraph(&mut body, &mut paragraph);
             }
