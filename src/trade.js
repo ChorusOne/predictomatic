@@ -141,6 +141,10 @@ function maximizeExpectedLogWealth(q) {
     // the first derivative of `expectedLogWealth`. We estimate the first and
     // second derivative numerically.
     const iterate = p => {
+        // To compute the derivative numerically, take a small step forward and
+        // backward for p. When we are close to 0 or 1, a fixed-size step would
+        // put p outside of the valid interval [pMin, pMax]; in that case, step
+        // half the distance to the edge instead.
         const pp = p;
         const p0 = Math.max(p - 0.01, (p + pMin) * 0.5, pMin);
         const p1 = Math.min(p + 0.01, (p + pMax) * 0.5, pMax);
