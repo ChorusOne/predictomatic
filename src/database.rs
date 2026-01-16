@@ -1046,6 +1046,77 @@ pub fn create_resolution(tx: &mut Transaction, outcome_id: i64, event_id: i64) -
     Ok(result)
 }
 
+#[derive(Debug)]
+pub struct ActivityTrade {
+    pub event_id: i64,
+    pub time: String,
+    pub user_email: String,
+    pub market_slug: String,
+    pub market_title: String,
+    pub outcome_label: String,
+    pub amount_bought: i64,
+}
+
+/// Select all trades made before the given event id,
+/// or NULL to get the most recent trades.
+pub fn get_trade_activity_before<'i, 't, 'a>(
+    tx: &'i mut Transaction<'t, 'a>,
+    limit: i64,
+    event_id: Option<i64>,
+) -> Result<Iter<'i, 'a, ActivityTrade>> {
+    let sql = r#"
+        select
+            e.id as event_id
+          , e.created_at as time
+          , a.owner as user_email
+          , m.slug  as market_slug
+          , m.title as market_title
+          , o.value as outcome_label
+          , t.amount as amount_bought
+        from
+          events e,
+          transfers t,
+          accounts a,
+          markets m,
+          outcomes o
+        where
+          ((:event_id is null) or (e.id < :event_id))
+          and (e.description = 'Trade')
+          and (t.event_id = e.id)
+          and (t.to_account_id = a.id)
+          and (a.owner <> 'SYSTEM')
+          and (a.market_id = m.id)
+          and (a.asset_id = o.id)
+        order by
+          e.id desc
+        limit
+          :limit;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, event_id)?;
+    statement.bind(2, limit)?;
+    let decode_row = |statement: &Statement| {
+        Ok(ActivityTrade {
+            event_id: statement.read(0)?,
+            time: statement.read(1)?,
+            user_email: statement.read(2)?,
+            market_slug: statement.read(3)?,
+            market_title: statement.read(4)?,
+            outcome_label: statement.read(5)?,
+            amount_bought: statement.read(6)?,
+        })
+    };
+    let result = Iter {
+        statement,
+        decode_row,
+    };
+    Ok(result)
+}
+
 // A useless main function, included only to make the example compile with
 // Cargo’s default settings for examples.
 #[allow(dead_code)]
