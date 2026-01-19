@@ -401,6 +401,7 @@ select
     e.id as event_id          -- :i64
   , e.created_at as time      -- :str
   , a.owner as user_email     -- :str
+  , a.market_id as market_id  -- :i64
   , m.slug  as market_slug    -- :str
   , m.title as market_title   -- :str
   , o.value as outcome_label  -- :str
