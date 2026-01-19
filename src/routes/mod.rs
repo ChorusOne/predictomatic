@@ -5,6 +5,7 @@
 // you may not use this file except in compliance with the License.
 // A copy of the License has been included in the root of the repository.
 
+mod activity;
 mod admin;
 mod assets;
 mod help;
@@ -238,12 +239,13 @@ pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> Res
     match path {
         [] | [""] => index::handle_index(tx, ctx),
         ["assets"] => assets::handle_assets_overview(tx, ctx),
-        ["icon.svg"] => Ok(respond_svg(get_favicon())),
+        ["activity"] => activity::handle_activity(tx, ctx),
+        ["bonus"] => admin::handle_bonus_page(ctx),
         ["help"] => help::handle_help(ctx),
+        ["icon.svg"] => Ok(respond_svg(get_favicon())),
         ["leaderboard"] => leaderboard::handle_leaderboard(tx, ctx),
         ["ledger"] => ledger::handle_ledger(ctx),
         ["market", market_slug] => market::handle_market(tx, ctx, market_slug),
-        ["bonus"] => admin::handle_bonus_page(ctx),
         _ => ctx.not_found("Not found."),
     }
 }
