@@ -45,12 +45,19 @@ fn view_activity(ctx: &Context, trade: &db::ActivityTrade) -> Markup {
             }
         }
         tr {
-            td title=(trade.time) { (trade.time[..10]) }
-            td .filler {}
-            td { (ctx.view_email(&trade.user_email)) }
-            td { "bought" }
-            td .num { (format!("{:.2}", amount)) }
-            td .nopad { (trade.outcome_label) }
+            td {
+                span .num title=(trade.time) {
+                    (trade.time[..10])
+                    " "
+                    (trade.time[11..16])
+                }
+                ", "
+                (ctx.view_email(&trade.user_email))
+                " bought "
+                (format!("{:.2}", amount))
+                " "
+                (trade.outcome_label)
+            }
         }
     }
 }
