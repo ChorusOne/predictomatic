@@ -404,6 +404,7 @@ select
   , m.slug  as market_slug    -- :str
   , m.title as market_title   -- :str
   , o.value as outcome_label  -- :str
+  , a.asset_id as asset_id    -- :i64
   , t.amount as amount_bought -- :i64
 from
   events e,

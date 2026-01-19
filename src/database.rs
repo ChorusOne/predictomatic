@@ -1054,6 +1054,7 @@ pub struct ActivityTrade {
     pub market_slug: String,
     pub market_title: String,
     pub outcome_label: String,
+    pub asset_id: i64,
     pub amount_bought: i64,
 }
 
@@ -1072,6 +1073,7 @@ pub fn get_trade_activity_before<'i, 't, 'a>(
           , m.slug  as market_slug
           , m.title as market_title
           , o.value as outcome_label
+          , a.asset_id as asset_id
           , t.amount as amount_bought
         from
           events e,
@@ -1107,7 +1109,8 @@ pub fn get_trade_activity_before<'i, 't, 'a>(
             market_slug: statement.read(3)?,
             market_title: statement.read(4)?,
             outcome_label: statement.read(5)?,
-            amount_bought: statement.read(6)?,
+            asset_id: statement.read(6)?,
+            amount_bought: statement.read(7)?,
         })
     };
     let result = Iter {

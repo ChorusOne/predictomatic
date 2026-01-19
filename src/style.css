@@ -380,7 +380,7 @@ aside form label input {
     padding-left: 0;
 }
 
-#trade-offer td.filler {
+td.filler {
     padding-left: 0;
     width: 100%;
 }
@@ -493,8 +493,14 @@ tr.system td.owner {
     grid-area: stats;
 }
 
+table.nowrap {
+    /* See also `#trade-offer table`. */
+    text-wrap-mode: nowrap;
+}
+
 table .w2 { width: 2rem; }
 table .w5 { width: 5rem; }
+table .nopad { padding-left: 1ex; }
 
 table tr.market-assets td {
     font-weight: 600;

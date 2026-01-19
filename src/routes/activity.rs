@@ -12,7 +12,7 @@ use crate::database as db;
 use crate::model::{self, Amount, AssetId, Market};
 use crate::routes::{Context, Result, index, respond_html, view_header, view_html_head};
 
-fn view_activity(ctx: &Context) -> Markup {
+fn view_activity_overview(ctx: &Context, activities: &[db::ActivityTrade]) -> Markup {
     html! {
         (view_html_head(ctx.prefix, "Activity — Predict-o-matic"))
         body {
@@ -21,6 +21,11 @@ fn view_activity(ctx: &Context) -> Markup {
                 section {
                     h1 { "Activity" }
                     p { "Activity will be show here." }
+                    table .nowrap {
+                        @for activity in activities {
+                            (view_activity(ctx, activity))
+                        }
+                    }
                 }
                 aside { (index::view_main_aside(ctx)) }
             }
@@ -28,6 +33,34 @@ fn view_activity(ctx: &Context) -> Markup {
     }
 }
 
+fn view_activity(ctx: &Context, trade: &db::ActivityTrade) -> Markup {
+    let asset = AssetId(trade.asset_id);
+    let amount = Amount(trade.amount_bought, asset);
+    html! {
+        tr .market-assets {
+            td colspan="6" {
+                a href={(ctx.prefix) "/market/" (trade.market_slug)} {
+                    (trade.market_title)
+                }
+            }
+        }
+        tr {
+            td title=(trade.time) { (trade.time[..10]) }
+            td .filler {}
+            td { (ctx.view_email(&trade.user_email)) }
+            td { "bought" }
+            td .num { (format!("{:.2}", amount)) }
+            td .nopad { (trade.outcome_label) }
+        }
+    }
+}
+
 pub fn handle_activity(tx: &mut db::Transaction, ctx: &Context) -> Result<Response> {
-    Ok(respond_html(view_activity(ctx)))
+    let limit = 100;
+    let before = None;
+    let mut activities = Vec::with_capacity(limit as usize);
+    for res in db::get_trade_activity_before(tx, limit, before)? {
+        activities.push(res?);
+    }
+    Ok(respond_html(view_activity_overview(ctx, &activities)))
 }
