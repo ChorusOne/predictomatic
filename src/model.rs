@@ -199,7 +199,7 @@ impl fmt::Display for Amount {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct EventId(i64);
+pub struct EventId(pub i64);
 
 /// Create a transfer from one account to another.
 pub fn create_transfer(
@@ -489,6 +489,18 @@ impl Market {
         let delta = *q_j - q_j_prime;
         if delta >= min_out { Some(delta) } else { None }
     }
+
+    /// Select trades from the database to show in the activities overview.
+    pub fn get_trade_activities(
+        &self,
+        tx: &mut Transaction,
+    ) -> Result<Vec<db::MarketTradeActivity>> {
+        let mut result = Vec::new();
+        for trade_res in db::get_trade_activity_by_market(tx, self.id.0)? {
+            result.push(trade_res?);
+        }
+        Ok(result)
+    }
 }
 
 pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Market>> {
@@ -714,6 +726,56 @@ pub fn create_resolution(tx: &mut Transaction, market: &Market, outcome: Outcome
     db::create_resolution(tx, outcome.0, event.0)?;
 
     Ok(())
+}
+
+/// Info about an event where a user traded, to show in activity overviews.
+pub struct TradeActivity<'a> {
+    pub event_id: EventId,
+
+    /// ISO-8601 timestamp of when the trade happened.
+    pub created_at: &'a str,
+
+    /// The user who performed the trade.
+    pub user_email: &'a str,
+
+    /// Amount of the asset bought.
+    ///
+    /// For activity overviews we only record the buy side. The event should
+    /// also contain a matching deposit or sale, but we want to keep the
+    /// activity overview brief. We show the outcome share amount rather their
+    /// points value, because I am lazy and this is easier to implement.
+    pub amount_bought: Amount,
+
+    /// Label of the asset bought (usually ‘Yes’ or ‘No’).
+    pub outcome_label: &'a str,
+}
+
+impl<'a> From<&'a db::MarketTradeActivity> for TradeActivity<'a> {
+    fn from(trade: &'a db::MarketTradeActivity) -> Self {
+        let asset = AssetId(trade.asset_id);
+        let amount_bought = Amount(trade.amount_bought, asset);
+        Self {
+            event_id: EventId(trade.event_id),
+            created_at: &trade.created_at,
+            user_email: &trade.user_email,
+            amount_bought,
+            outcome_label: &trade.outcome_label,
+        }
+    }
+}
+
+impl<'a> From<&'a db::TradeActivity> for TradeActivity<'a> {
+    fn from(trade: &'a db::TradeActivity) -> Self {
+        let asset = AssetId(trade.asset_id);
+        let amount_bought = Amount(trade.amount_bought, asset);
+        Self {
+            event_id: EventId(trade.event_id),
+            created_at: &trade.created_at,
+            user_email: &trade.user_email,
+            amount_bought,
+            outcome_label: &trade.outcome_label,
+        }
+    }
 }
 
 #[cfg(test)]

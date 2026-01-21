@@ -179,6 +179,22 @@ fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup 
     }
 }
 
+fn view_market_activity(ctx: &Context, trades: &[db::MarketTradeActivity]) -> Markup {
+    if trades.is_empty() {
+        return html! {
+            p { "There have not been any trades in this market yet." }
+        };
+    }
+
+    html! {
+        table .nowrap {
+            @for trade in trades {
+                (crate::routes::activity::view_trade(ctx, trade.into()))
+            }
+        }
+    }
+}
+
 fn view_market_admin(ctx: &Context, market: &Market) -> Markup {
     html! {
         h3 { "Administration" }
@@ -198,7 +214,7 @@ fn view_market_admin(ctx: &Context, market: &Market) -> Markup {
     }
 }
 
-fn view_market(ctx: &Context, market: &Market) -> Markup {
+fn view_market(ctx: &Context, market: &Market, trades: &[db::MarketTradeActivity]) -> Markup {
     let dist = market.implied_distribution();
     let ps = dist.ps();
 
@@ -274,7 +290,7 @@ fn view_market(ctx: &Context, market: &Market) -> Markup {
                         false => (view_market_participants_profits(ctx, &market.profits)),
                     }
                     h2 { "Activity" }
-                    p { "In the future I would like to show a log of trades and comments here." }
+                    (view_market_activity(ctx, trades))
                 }
                 aside {
                     (view_market_stats(market, &ps))
@@ -375,7 +391,8 @@ pub fn handle_market(
     market_slug: &str,
 ) -> Result<Response> {
     let market = get_market_by_slug(tx, ctx, market_slug)?;
-    let body = view_market(ctx, &market);
+    let trades = market.get_trade_activities(tx)?;
+    let body = view_market(ctx, &market, &trades);
     Ok(respond_html(body))
 }
 

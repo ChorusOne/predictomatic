@@ -9,15 +9,10 @@ use maud::{Markup, html};
 
 use crate::Response;
 use crate::database as db;
-use crate::model::{self, Amount, AssetId, Market};
+use crate::model::TradeActivity;
 use crate::routes::{Context, Result, index, respond_html, view_header, view_html_head};
 
-fn view_activity_overview(ctx: &Context, trades: &[db::ActivityTrade], per_page: usize) -> Markup {
-    let view_trades = match trades.len() {
-        0 => &[],
-        n => &trades[..n - 1],
-    };
-
+fn view_activity_overview(ctx: &Context, trades: &[db::TradeActivity], per_page: usize) -> Markup {
     html! {
         (view_html_head(ctx.prefix, "Activity — Predict-o-matic"))
         body {
@@ -31,7 +26,7 @@ fn view_activity_overview(ctx: &Context, trades: &[db::ActivityTrade], per_page:
                             @if i == 0 || trades[i - 1].market_id != trade.market_id {
                                 (view_market_header(ctx, trade))
                             }
-                            (view_trade(ctx, trade))
+                            (view_trade(ctx, trade.into()))
                         }
                     }
                     @if let Some(last) = trades.get(per_page) {
@@ -48,7 +43,7 @@ fn view_activity_overview(ctx: &Context, trades: &[db::ActivityTrade], per_page:
     }
 }
 
-fn view_market_header(ctx: &Context, trade: &db::ActivityTrade) -> Markup {
+fn view_market_header(ctx: &Context, trade: &db::TradeActivity) -> Markup {
     html! {
         tr .section-header {
             td colspan="6" {
@@ -60,22 +55,20 @@ fn view_market_header(ctx: &Context, trade: &db::ActivityTrade) -> Markup {
     }
 }
 
-fn view_trade(ctx: &Context, trade: &db::ActivityTrade) -> Markup {
-    let asset = AssetId(trade.asset_id);
-    let amount = Amount(trade.amount_bought, asset);
+pub fn view_trade(ctx: &Context, trade: TradeActivity) -> Markup {
     html! {
         // Give rows an id so you can link to a particular one if needed.
-        tr id={"event-" (trade.event_id)} {
+        tr id={"event-" (trade.event_id.0)} {
             td {
-                span .num title=(trade.time) {
-                    (trade.time[..10])
+                span .num title=(trade.created_at) {
+                    (trade.created_at[..10])
                     " "
-                    (trade.time[11..16])
+                    (trade.created_at[11..16])
                 }
                 ", "
-                (ctx.view_email(&trade.user_email))
+                (ctx.view_email(trade.user_email))
                 " bought "
-                (format!("{:.2}", amount))
+                (format!("{:.2}", trade.amount_bought))
                 " "
                 (trade.outcome_label)
             }
@@ -115,7 +108,7 @@ pub fn handle_activity_overview(
             // The compiler can't infer the right lifetime unfortunately even
             // though all these strings are owned, make a heap-allocated copy
             // then, it's fast enough anyway.
-            Reverse(trade.time[..10].to_string()),
+            Reverse(trade.created_at[..10].to_string()),
             trade.market_id,
             Reverse(trade.event_id),
         )
