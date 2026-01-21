@@ -57,8 +57,8 @@ pub fn view_main_aside(ctx: &Context) -> Markup {
         p {
             a href=(url("/assets")) { "Assets" } br;
             a href=(url("/ledger")) { "Ledger" } br;
-            a href=(url("/activity")) { "Activity" } br;
-            a href=(url("/leaderboard")) { "Leaderboard" }
+            a href=(url("/leaderboard")) { "Leaderboard" } br;
+            a href=(url("/activity")) { "Activity" }
         }
         h3 { "Help" }
         p {

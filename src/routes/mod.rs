@@ -239,7 +239,8 @@ pub fn handle_get(tx: &mut db::Transaction, ctx: &Context, path: &[&str]) -> Res
     match path {
         [] | [""] => index::handle_index(tx, ctx),
         ["assets"] => assets::handle_assets_overview(tx, ctx),
-        ["activity"] => activity::handle_activity(tx, ctx),
+        ["activity"] => activity::handle_activity_overview(tx, ctx, None),
+        ["activity", event_id] => activity::handle_activity_overview(tx, ctx, Some(event_id)),
         ["bonus"] => admin::handle_bonus_page(ctx),
         ["help"] => help::handle_help(ctx),
         ["icon.svg"] => Ok(respond_svg(get_favicon())),

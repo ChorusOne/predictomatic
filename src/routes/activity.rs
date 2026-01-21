@@ -12,7 +12,12 @@ use crate::database as db;
 use crate::model::{self, Amount, AssetId, Market};
 use crate::routes::{Context, Result, index, respond_html, view_header, view_html_head};
 
-fn view_activity_overview(ctx: &Context, trades: &[db::ActivityTrade]) -> Markup {
+fn view_activity_overview(ctx: &Context, trades: &[db::ActivityTrade], per_page: usize) -> Markup {
+    let view_trades = match trades.len() {
+        0 => &[],
+        n => &trades[..n - 1],
+    };
+
     html! {
         (view_html_head(ctx.prefix, "Activity — Predict-o-matic"))
         body {
@@ -20,13 +25,20 @@ fn view_activity_overview(ctx: &Context, trades: &[db::ActivityTrade]) -> Markup
             div .main .wider {
                 section {
                     h1 { "Activity" }
-                    p { "Activity will be show here." }
+                    p { "This page shows a reverse-chronological overview of trades across all markets." }
                     table .nowrap {
-                        @for (i, trade) in trades.iter().enumerate() {
+                        @for (i, trade) in trades.iter().enumerate().take(per_page) {
                             @if i == 0 || trades[i - 1].market_id != trade.market_id {
                                 (view_market_header(ctx, trade))
                             }
                             (view_trade(ctx, trade))
+                        }
+                    }
+                    @if let Some(last) = trades.get(per_page) {
+                        p {
+                            a href={(ctx.prefix) "/activity/" (last.event_id)} {
+                                "Older activity →"
+                            }
                         }
                     }
                 }
@@ -38,14 +50,13 @@ fn view_activity_overview(ctx: &Context, trades: &[db::ActivityTrade]) -> Markup
 
 fn view_market_header(ctx: &Context, trade: &db::ActivityTrade) -> Markup {
     html! {
-        tr .market-assets {
+        tr .section-header {
             td colspan="6" {
                 a href={(ctx.prefix) "/market/" (trade.market_slug)} {
                     (trade.market_title)
                 }
             }
         }
-
     }
 }
 
@@ -53,7 +64,8 @@ fn view_trade(ctx: &Context, trade: &db::ActivityTrade) -> Markup {
     let asset = AssetId(trade.asset_id);
     let amount = Amount(trade.amount_bought, asset);
     html! {
-        tr {
+        // Give rows an id so you can link to a particular one if needed.
+        tr id={"event-" (trade.event_id)} {
             td {
                 span .num title=(trade.time) {
                     (trade.time[..10])
@@ -71,11 +83,26 @@ fn view_trade(ctx: &Context, trade: &db::ActivityTrade) -> Markup {
     }
 }
 
-pub fn handle_activity(tx: &mut db::Transaction, ctx: &Context) -> Result<Response> {
-    let limit = 100;
-    let before = None;
-    let mut activities = Vec::with_capacity(limit as usize);
-    for res in db::get_trade_activity_before(tx, limit, before)? {
+pub fn handle_activity_overview(
+    tx: &mut db::Transaction,
+    ctx: &Context,
+    max_event_id_str: Option<&str>,
+) -> Result<Response> {
+    use std::str::FromStr;
+    let max_event_id = match max_event_id_str {
+        None => None,
+        Some(s) => match i64::from_str(s) {
+            Ok(i) => Some(i),
+            Err(..) => return ctx.bad_request("Invalid event id for activity overview."),
+        },
+    };
+
+    // We try to select one more than what we display. This way we know if there
+    // should be a next page, and we also know the id of the first event on the
+    // next page.
+    let per_page = 100;
+    let mut activities = Vec::with_capacity(per_page + 1);
+    for res in db::get_trade_activity_until(tx, (per_page + 1) as i64, max_event_id)? {
         activities.push(res?);
     }
 
@@ -94,5 +121,9 @@ pub fn handle_activity(tx: &mut db::Transaction, ctx: &Context) -> Result<Respon
         )
     });
 
-    Ok(respond_html(view_activity_overview(ctx, &activities)))
+    Ok(respond_html(view_activity_overview(
+        ctx,
+        &activities,
+        per_page,
+    )))
 }

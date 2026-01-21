@@ -500,16 +500,19 @@ table.nowrap {
 
 table .w2 { width: 2rem; }
 table .w5 { width: 5rem; }
-table .nopad { padding-left: 1ex; }
 
-table tr.market-assets td {
+table tr.section-header td {
     font-weight: 600;
     vertical-align: bottom;
 }
 
-table tr.market-assets a {
+table tr.section-header a {
     display: block;
     margin-top: 1.6rem;
+}
+
+table tr.section-header:first-child a {
+    margin-top: 0;
 }
 
 section > table + p,

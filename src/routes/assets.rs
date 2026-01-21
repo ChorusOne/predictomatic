@@ -39,7 +39,7 @@ struct UserAsset<'a> {
 
 fn view_market_assets(ctx: &Context, market: &MarketAssets) -> Markup {
     html! {
-        tr .market-assets {
+        tr .section-header {
             td colspan="3" {
                 a href=(ctx.market_url(market.market, "")) {
                     (market.market.title)

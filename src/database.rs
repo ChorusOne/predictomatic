@@ -1059,9 +1059,9 @@ pub struct ActivityTrade {
     pub amount_bought: i64,
 }
 
-/// Select all trades made before the given event id,
+/// Select all trades made up to and including the given event id,
 /// or NULL to get the most recent trades.
-pub fn get_trade_activity_before<'i, 't, 'a>(
+pub fn get_trade_activity_until<'i, 't, 'a>(
     tx: &'i mut Transaction<'t, 'a>,
     limit: i64,
     event_id: Option<i64>,
@@ -1084,7 +1084,7 @@ pub fn get_trade_activity_before<'i, 't, 'a>(
           markets m,
           outcomes o
         where
-          ((:event_id is null) or (e.id < :event_id))
+          ((:event_id is null) or (e.id <= :event_id))
           and (e.description = 'Trade')
           and (t.event_id = e.id)
           and (t.to_account_id = a.id)

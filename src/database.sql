@@ -394,9 +394,9 @@ order by
 -- @query create_resolution(outcome_id: i64, event_id: i64)
 update outcomes set resolved_in = :event_id where id = :outcome_id;
 
--- Select all trades made before the given event id,
+-- Select all trades made up to and including the given event id,
 -- or NULL to get the most recent trades.
--- @query get_trade_activity_before(limit: i64, event_id: i64?) ->* ActivityTrade
+-- @query get_trade_activity_until(limit: i64, event_id: i64?) ->* ActivityTrade
 select
     e.id as event_id          -- :i64
   , e.created_at as time      -- :str
@@ -414,7 +414,7 @@ from
   markets m,
   outcomes o
 where
-  ((:event_id is null) or (e.id < :event_id))
+  ((:event_id is null) or (e.id <= :event_id))
   and (e.description = 'Trade')
   and (t.event_id = e.id)
   and (t.to_account_id = a.id)
