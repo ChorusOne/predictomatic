@@ -186,10 +186,28 @@ fn view_market_activity(ctx: &Context, trades: &[db::MarketTradeActivity]) -> Ma
         };
     }
 
+    // If there is a lot of activity, hide the older activity behind an expander
+    // to not pollute the page too much. Pick the split point so that there
+    // are at least 3 items in the expander if we show an expander.
+    let (recent, older) = match trades.len() {
+        0..8 => (trades, &[][..]),
+        8.. => (&trades[..5], &trades[5..]),
+    };
+
     html! {
         table .nowrap {
-            @for trade in trades {
+            @for trade in recent {
                 (crate::routes::activity::view_trade(ctx, trade.into()))
+            }
+        }
+        @if !older.is_empty() {
+            details {
+                summary { "Older activity" }
+                table .nowrap {
+                    @for trade in older {
+                        (crate::routes::activity::view_trade(ctx, trade.into()))
+                    }
+                }
             }
         }
     }

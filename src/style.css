@@ -280,6 +280,11 @@ aside form label input {
     border-width: 2pt;
 }
 
+details summary {
+    /* The summary is clickable, use a regular pointer instead of an I-beam. */
+    cursor: default;
+}
+
 .slider {
     width: calc(100% - 2rem);
     height: 10rem;
