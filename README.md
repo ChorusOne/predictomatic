@@ -1,4 +1,6 @@
-# Predictomatic
+<p align="center">
+<img src="assets/logo.svg" alt="Predictomatic" width="400"/>
+</p>
 
 The Predictomatic is a simple webapp for running internal prediction markets.
 It handles market creation, trading, resolution, and it displays the market's
