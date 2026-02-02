@@ -2,14 +2,14 @@
 <img src="assets/logo.svg" alt="Predictomatic" width="400"/>
 </p>
 
-The Predictomatic is a simple webapp for running internal prediction markets.
+Predictomatic is a simple webapp for running internal prediction markets.
 It handles market creation, trading, resolution, and it displays the market's
 current predictions. It needs an external system such as [OAuth2 Proxy][o2proxy]
 for user management and authentication.
 
 ## Building
 
-The Predictomatic is written in Rust and builds with Cargo:
+Predictomatic is written in Rust and builds with Cargo:
 
     cargo build --release
     target/release/predictomatic predictomatic.toml
@@ -27,8 +27,8 @@ Proxy pass the user’s email address, enable the `--set-xauthrequest` option.
 The documentation [contains an example][o2-nginx] for how to configure Nginx to
 set the `X-Email` header when using `auth_request`.
 
-The Predictomatic stores all data in a SQLite database. To back up the
-database, one convenient way is to use [`VACUUM INTO`][vacuum]:
+Predictomatic stores all data in a SQLite database. To back up the database, one
+convenient way is to use [`VACUUM INTO`][vacuum]:
 
     $ sqlite3 predictomatic.sqlite3
     sqlite> VACUUM INTO 'predictomatic-backup.sqlite3';
@@ -74,7 +74,7 @@ git ls-files | entr -r cargo run -- predictomatic.toml
 
 ## License
 
-The Predictomatic is a fork of the [Hack-o-matic][hackomatic] by Chorus One.
+Predictomatic is a fork of the [Hack-o-matic][hackomatic] by Chorus One.
 Both are licensed under the Apache 2.0 License. A copy of the license is
 included in the root of the repository.
 
