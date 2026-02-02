@@ -1,4 +1,4 @@
-// Predict-o-matic -- A webapp for facilitating internal prediction markets
+// Predictomatic -- A webapp for facilitating internal prediction markets
 // Copyright 2025 Chorus One
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -150,7 +150,7 @@ fn respond_svg(svg: &str) -> Response {
 
 fn respond_error<R: Into<String>>(server_prefix: &str, reason: R) -> Response {
     let page = html! {
-        (view_html_head(server_prefix, "Predict-o-matic Error"))
+        (view_html_head(server_prefix, "Predictomatic Error"))
         body {
             div .main-error {
                 h1 { "D’oh!" }
@@ -221,7 +221,7 @@ fn view_header(ctx: &Context) -> Markup {
     html! {
         nav {
             h1 {
-                a href=(root_url) { "Predict-o-matic" }
+                a href=(root_url) { "Predictomatic" }
             }
             " "
             span .balance {

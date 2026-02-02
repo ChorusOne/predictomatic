@@ -1,4 +1,4 @@
-// Predict-o-matic -- A webapp for facilitating internal prediction markets
+// Predictomatic -- A webapp for facilitating internal prediction markets
 // Copyright 2025 Chorus One
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +54,7 @@ pub struct ServerConfig {
 
     /// The url prefix, in case the app is not hosted at the root of a domain.
     ///
-    /// E.g. `/predict-o-matic`. If the prefix is not empty, it must start with
+    /// E.g. `/predictomatic`. If the prefix is not empty, it must start with
     /// a slash. The prefix must not end with a slash.
     pub prefix: String,
 

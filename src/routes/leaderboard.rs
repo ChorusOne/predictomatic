@@ -1,4 +1,4 @@
-// Predict-o-matic -- A webapp for facilitating internal prediction markets
+// Predictomatic -- A webapp for facilitating internal prediction markets
 // Copyright 2025 Chorus One
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +28,7 @@ struct UserNetWorth {
 
 fn view_net_worth_list(ctx: &Context, users_net_worth: &[(String, UserNetWorth)]) -> Markup {
     html! {
-        (view_html_head(ctx.prefix, "Leaderboard — Predict-o-matic"))
+        (view_html_head(ctx.prefix, "Leaderboard — Predictomatic"))
         body {
             (view_header(ctx))
             div .main .wider {

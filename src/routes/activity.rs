@@ -1,4 +1,4 @@
-// Predict-o-matic -- A webapp for facilitating internal prediction markets
+// Predictomatic -- A webapp for facilitating internal prediction markets
 // Copyright 2026 Chorus One
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,7 @@ use crate::routes::{Context, Result, index, respond_html, view_header, view_html
 
 fn view_activity_overview(ctx: &Context, trades: &[db::TradeActivity], per_page: usize) -> Markup {
     html! {
-        (view_html_head(ctx.prefix, "Activity — Predict-o-matic"))
+        (view_html_head(ctx.prefix, "Activity — Predictomatic"))
         body {
             (view_header(ctx))
             div .main .wider {

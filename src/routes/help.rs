@@ -1,4 +1,4 @@
-// Predict-o-matic -- A webapp for facilitating internal prediction markets
+// Predictomatic -- A webapp for facilitating internal prediction markets
 // Copyright 2025 Chorus One
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,7 +83,7 @@ fn get_help_sections(points: &str) -> Vec<HelpSection> {
 fn view_help(ctx: &Context) -> Markup {
     let user_points = format!("{:.2}", ctx.user_points);
     html! {
-        (view_html_head(ctx.prefix, "Predict-o-matic"))
+        (view_html_head(ctx.prefix, "Predictomatic"))
         body {
             (view_header(ctx))
             div .main .wider {
