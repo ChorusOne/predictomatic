@@ -393,3 +393,59 @@ order by
 
 -- @query create_resolution(outcome_id: i64, event_id: i64)
 update outcomes set resolved_in = :event_id where id = :outcome_id;
+
+-- Select all trades made up to and including the given event id,
+-- or NULL to get the most recent trades.
+-- @query get_trade_activity_until(limit: i64, event_id: i64?) ->* TradeActivity
+select
+    e.id as event_id           -- :i64
+  , e.created_at as created_at -- :str
+  , a.owner as user_email      -- :str
+  , a.market_id as market_id   -- :i64
+  , m.slug  as market_slug     -- :str
+  , m.title as market_title    -- :str
+  , o.value as outcome_label   -- :str
+  , a.asset_id as asset_id     -- :i64
+  , t.amount as amount_bought  -- :i64
+from
+  events e,
+  transfers t,
+  accounts a,
+  markets m,
+  outcomes o
+where
+  ((:event_id is null) or (e.id <= :event_id))
+  and (e.description = 'Trade')
+  and (t.event_id = e.id)
+  and (t.to_account_id = a.id)
+  and (a.owner <> 'SYSTEM')
+  and (a.market_id = m.id)
+  and (a.asset_id = o.id)
+order by
+  e.id desc
+limit
+  :limit;
+
+-- Select all trades made in this market (see also `get_trade_activity_until`).
+-- @query get_trade_activity_by_market(market_id: i64) ->* MarketTradeActivity
+select
+    e.id as event_id           -- :i64
+  , e.created_at as created_at -- :str
+  , a.owner as user_email      -- :str
+  , o.value as outcome_label   -- :str
+  , a.asset_id as asset_id     -- :i64
+  , t.amount as amount_bought  -- :i64
+from
+  events e,
+  transfers t,
+  accounts a,
+  outcomes o
+where
+  (e.description = 'Trade')
+  and (t.event_id = e.id)
+  and (t.to_account_id = a.id)
+  and (a.owner <> 'SYSTEM')
+  and (a.market_id = :market_id)
+  and (a.asset_id = o.id)
+order by
+  e.id desc;

@@ -280,6 +280,11 @@ aside form label input {
     border-width: 2pt;
 }
 
+details summary {
+    /* The summary is clickable, use a regular pointer instead of an I-beam. */
+    cursor: default;
+}
+
 .slider {
     width: calc(100% - 2rem);
     height: 10rem;
@@ -380,7 +385,7 @@ aside form label input {
     padding-left: 0;
 }
 
-#trade-offer td.filler {
+td.filler {
     padding-left: 0;
     width: 100%;
 }
@@ -493,17 +498,26 @@ tr.system td.owner {
     grid-area: stats;
 }
 
+table.nowrap {
+    /* See also `#trade-offer table`. */
+    text-wrap-mode: nowrap;
+}
+
 table .w2 { width: 2rem; }
 table .w5 { width: 5rem; }
 
-table tr.market-assets td {
+table tr.section-header td {
     font-weight: 600;
     vertical-align: bottom;
 }
 
-table tr.market-assets a {
+table tr.section-header a {
     display: block;
     margin-top: 1.6rem;
+}
+
+table tr.section-header:first-child a {
+    margin-top: 0;
 }
 
 section > table + p,
