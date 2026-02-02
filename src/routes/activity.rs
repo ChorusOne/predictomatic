@@ -46,7 +46,7 @@ fn view_activity_overview(ctx: &Context, trades: &[db::TradeActivity], per_page:
 fn view_market_header(ctx: &Context, trade: &db::TradeActivity) -> Markup {
     html! {
         tr .section-header {
-            td colspan="6" {
+            td {
                 a href={(ctx.prefix) "/market/" (trade.market_slug)} {
                     (trade.market_title)
                 }
