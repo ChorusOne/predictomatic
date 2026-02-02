@@ -62,8 +62,6 @@ pub fn view_trade(ctx: &Context, trade: TradeActivity) -> Markup {
             td {
                 span .num title=(trade.created_at) {
                     (trade.created_at[..10])
-                    " "
-                    (trade.created_at[11..16])
                 }
                 ", "
                 (ctx.view_email(trade.user_email))
