@@ -1,4 +1,4 @@
-// Predict-o-matic -- A webapp for facilitating internal prediction markets
+// Predictomatic -- A webapp for facilitating internal prediction markets
 // Copyright 2025 Chorus One
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@ use crate::routes::{
 
 fn view_bonus_page(ctx: &Context) -> Markup {
     html! {
-        (view_html_head(ctx.prefix, "Predict-o-matic"))
+        (view_html_head(ctx.prefix, "Predictomatic"))
         body {
             (view_header(ctx))
             div .main .wider {

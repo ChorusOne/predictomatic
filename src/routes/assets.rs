@@ -1,4 +1,4 @@
-// Predict-o-matic -- A webapp for facilitating internal prediction markets
+// Predictomatic -- A webapp for facilitating internal prediction markets
 // Copyright 2025 Chorus One
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,7 +68,7 @@ fn view_assets_overview(ctx: &Context, markets: &[MarketAssets]) -> Markup {
     let net_worth = total_illiquid + ctx.user_points;
 
     html! {
-        (view_html_head(ctx.prefix, "Assets — Predict-o-matic"))
+        (view_html_head(ctx.prefix, "Assets — Predictomatic"))
         body {
             (view_header(ctx))
             div .main .wider {

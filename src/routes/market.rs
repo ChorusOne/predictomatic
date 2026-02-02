@@ -1,4 +1,4 @@
-// Predict-o-matic -- A webapp for facilitating internal prediction markets
+// Predictomatic -- A webapp for facilitating internal prediction markets
 // Copyright 2025 Chorus One
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -290,7 +290,7 @@ fn view_market(ctx: &Context, market: &Market, trades: &[db::MarketTradeActivity
         .collect();
 
     html! {
-        (view_html_head(ctx.prefix, &format!("{} — Predict-o-matic", market.title)))
+        (view_html_head(ctx.prefix, &format!("{} — Predictomatic", market.title)))
         body {
             (view_header(ctx))
             div .main {

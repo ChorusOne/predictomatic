@@ -8,14 +8,14 @@ In this document, please don't fill up the lines to 80 columns,
 instead add line breaks after periods or commas, to keep the diff sensible.
 -->
 
-Predict-o-matic facilitates prediction markets.
+Predictomatic facilitates prediction markets.
 Prediction markets are a tool for aggregating information about future events.
 This manual provides a short introduction to prediction markets,
-and how they work in Predict-o-matic.
+and how they work in Predictomatic.
 
 ## Markets
 
-Predict-o-matic hosts <em>markets</em>.
+Predictomatic hosts <em>markets</em>.
 Every market has two or more <em>outcomes</em>.
 For example,
 a market might ask “Will Ethereum be worth more than $4000 on 2026-01-01?”
@@ -24,12 +24,12 @@ Users can trade <em>outcome shares</em> in these outcomes,
 and the price of a share corresponds to
 the probability that the outcome will happen.
 In this way,
-Predict-o-matic aggregates input from users
+Predictomatic aggregates input from users
 into a single market prediction.
 
 ## Points
 
-Predict-o-matic simulates a virtual economy
+Predictomatic simulates a virtual economy
 where the main currency is <em>points</em>,
 denoted with the ‘$’-symbol.
 Every new user starts out with some points.

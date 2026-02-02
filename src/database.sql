@@ -1,4 +1,4 @@
--- Predict-o-matic -- A webapp for facilitating internal prediction markets
+-- Predictomatic -- A webapp for facilitating internal prediction markets
 -- Copyright 2025 Chorus One
 
 -- Licensed under the Apache License, Version 2.0 (the "License");
