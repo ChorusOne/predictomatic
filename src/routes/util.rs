@@ -8,6 +8,8 @@
 use crate::model::{Amount, AssetId};
 use crate::routes::{Context, Result};
 
+use maud::{Markup, html};
+
 /// Parse the key `amount` from a form body, into a positive amount of points.
 pub fn parse_form_amount(ctx: &Context, body: &str) -> Result<Amount> {
     let mut amount = AssetId::POINTS.zero();
@@ -32,4 +34,20 @@ pub fn parse_form_amount(ctx: &Context, body: &str) -> Result<Amount> {
     }
 
     Ok(amount)
+}
+
+/// View the date part of an ISO-8601 string, with full time as tooltip.
+pub fn view_date(iso8601: &str) -> Markup {
+    assert_eq!(
+        iso8601.len(),
+        20,
+        "Input must be of form 'YYYY-MM-DDTHH:mm:ssZ'."
+    );
+    assert_eq!(&iso8601[10..11], "T");
+    assert_eq!(&iso8601[19..20], "Z");
+    let date = &iso8601[..10];
+    let time = &iso8601[11..19];
+    // Add the full timestamp in the tooltip, in a ISO-8601 like
+    // format that is actually readable to humans.
+    html! { span .num title={(date) " " (time) " UTC"} { (date) } }
 }

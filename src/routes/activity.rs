@@ -11,6 +11,7 @@ use crate::Response;
 use crate::database as db;
 use crate::model::TradeActivity;
 use crate::routes::{Context, Result, index, respond_html, view_header, view_html_head};
+use crate::routes::util;
 
 fn view_activity_overview(ctx: &Context, trades: &[db::TradeActivity], per_page: usize) -> Markup {
     html! {
@@ -56,15 +57,11 @@ fn view_market_header(ctx: &Context, trade: &db::TradeActivity) -> Markup {
 }
 
 pub fn view_trade(ctx: &Context, trade: TradeActivity) -> Markup {
-    let date = &trade.created_at[..10];
-    let time = &trade.created_at[11..19];
     html! {
         // Give rows an id so you can link to a particular one if needed.
         tr id={"event-" (trade.event_id.0)} {
             td {
-                // Add the full timestamp in the tooltip, in a ISO-8601 like
-                // format that is actually readable to humans.
-                span .num title={(date) " " (time) " UTC"} { (date) }
+                (util::view_date(trade.created_at))
                 ", "
                 (ctx.view_email(trade.user_email))
                 " bought "
