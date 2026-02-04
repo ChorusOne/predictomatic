@@ -28,7 +28,7 @@ create table if not exists schema_versions
 insert into
   schema_versions (version, created_at)
 values
-  (2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+  (3, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
 
 create table accounts
 ( id       integer primary key
@@ -93,6 +93,17 @@ create table markets
 , unique (slug)
 , unique (title)
 );
+
+-- Open and close events for the market. Per market there may be at most one
+-- event in the future, e.g. its scheduled open or close.
+create table market_statuses
+( id           integer primary key
+, market_id    integer not null references markets (id)
+, effective_at text not null
+, status       text not null
+);
+create index ix_market_statuses_market_id_effective_at
+  on market_statuses (market_id, effective_at);
 
 create table outcomes
 ( id          integer primary key
@@ -173,6 +184,42 @@ order by
   account_id asc;
 
 -- @end migrate_schema_from_1_to_2()
+
+-- @begin migrate_schema_from_2_to_3()
+insert into
+  schema_versions (version, created_at)
+values
+  (3, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+
+create table market_statuses
+( id           integer primary key
+, market_id    integer not null references markets (id)
+, effective_at text not null
+, status       text not null
+);
+create index ix_market_statuses_market_id_effective_at
+  on market_statuses (market_id, effective_at);
+
+-- We backfill the open times of the markets to their creation time, for past
+-- markets there was no concept of creating them before they are open.
+insert into
+  market_statuses (market_id, effective_at, status)
+select
+  id, created_at, 'Open'
+from
+  markets;
+
+-- We also backfill the close events from the resolutions.
+insert into
+  market_statuses (market_id, effective_at, status)
+select
+  o.market_id, e.created_at, 'Closed'
+from
+  outcomes o,
+  events e
+where
+  o.resolved_in = e.id;
+-- @end migrate_schema_from_2_to_3()
 
 -- @query get_schema_version() ->1 i64
 select coalesce(max(version), 0) from schema_versions;
@@ -285,6 +332,22 @@ from
   markets
 where
   slug = :slug;
+
+-- @query get_market_statuses(market_id: i64) ->* MarketStatus
+select
+    effective_at -- :str
+  , status       -- :str
+  , unixepoch(effective_at) > unixepoch() as is_future -- :i64
+from
+  market_statuses
+where
+  market_id = :market_id
+order by
+  effective_at desc
+limit
+  -- There should be at most one future event, so if we select 2, we also get
+  -- the current status.
+  2;
 
 -- Create a new market, return its id.
 -- @query create_market(slug: str, kind: str, title: str, description: str) ->1 i64

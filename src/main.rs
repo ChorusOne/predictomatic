@@ -311,7 +311,13 @@ fn initialize_database(config: &DatabaseConfig, markets: &[MarketConfig]) -> db:
             println!("Updated database schema from version 1 to 2.");
             tx = connection.begin()?;
         }
-        2 => { /* Ok, as expected. */ }
+        2 => {
+            db::migrate_schema_from_2_to_3(&mut tx)?;
+            tx.commit()?;
+            println!("Updated database schema from version 2 to 3.");
+            tx = connection.begin()?;
+        }
+        3 => { /* Ok, as expected. */ }
         n => panic!("Database schema version {n} is newer than supported."),
     }
     model::ensure_markets(&mut tx, markets)?;

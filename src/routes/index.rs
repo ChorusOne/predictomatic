@@ -43,7 +43,9 @@ fn view_market_summary(ctx: &Context, market: &Market) -> Markup {
             }
             div .summary {
                 (teaser)
-                (view_market_stats(market, &ps))
+                table {
+                    (view_market_stats(market, &ps))
+                }
             }
         }
     }

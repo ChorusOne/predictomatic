@@ -365,6 +365,19 @@ pub struct RealizedProfit {
     pub amount_out: Amount,
 }
 
+#[derive(Debug)]
+pub enum MarketStatus {
+    Open,
+    Closed,
+}
+
+#[derive(Debug)]
+pub struct MarketStatusAt {
+    pub effective_at: String,
+    pub is_future: bool,
+    pub status: MarketStatus,
+}
+
 pub struct Market {
     pub id: MarketId,
     pub slug: String,
@@ -372,6 +385,9 @@ pub struct Market {
     pub description: String,
     pub age: Duration,
     pub outcomes: Vec<Outcome>,
+
+    /// Status changes and their effective date, in reverse chronological order.
+    pub statuses: Vec<MarketStatusAt>,
 
     /// For every owner, their balance for this market.
     pub balances: HashMap<String, Balance>,
@@ -565,6 +581,20 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
         });
     }
 
+    let mut statuses = Vec::with_capacity(2);
+    for res_row in db::get_market_statuses(tx, market.id)? {
+        let row = res_row?;
+        statuses.push(MarketStatusAt {
+            status: match &row.status[..] {
+                "Open" => MarketStatus::Open,
+                "Closed" => MarketStatus::Closed,
+                other => panic!("Invalid market status: {other:?}"),
+            },
+            effective_at: row.effective_at,
+            is_future: row.is_future == 1,
+        });
+    }
+
     Ok(Some(Market {
         id: market_id,
         slug: market.slug,
@@ -572,6 +602,7 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
         description: market.description,
         age: Duration::from_secs(market.age_seconds as u64),
         outcomes,
+        statuses,
         balances,
         profits,
     }))

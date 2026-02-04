@@ -10,8 +10,8 @@ use maud::{Markup, html};
 use crate::Response;
 use crate::database as db;
 use crate::model::TradeActivity;
-use crate::routes::{Context, Result, index, respond_html, view_header, view_html_head};
 use crate::routes::util;
+use crate::routes::{Context, Result, index, respond_html, view_header, view_html_head};
 
 fn view_activity_overview(ctx: &Context, trades: &[db::TradeActivity], per_page: usize) -> Markup {
     html! {

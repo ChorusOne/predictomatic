@@ -9,7 +9,10 @@ use maud::{Markup, html};
 
 use crate::Response;
 use crate::database as db;
-use crate::model::{self, Amount, AssetId, Balance, Market, RealizedProfit};
+use crate::model::{
+    self, Amount, AssetId, Balance, Market, MarketStatus, MarketStatusAt, RealizedProfit,
+};
+use crate::routes::util;
 use crate::routes::{
     Context, Result, redirect_see_other, respond_html, view_header, view_html_head,
 };
@@ -34,20 +37,44 @@ struct MarketPosition<'a> {
 pub fn view_market_stats(market: &Market, implied_probabilities: &[f64]) -> Markup {
     let liquidity = market.total_deposited_excluding_system();
     html! {
-        table {
+        tr {
+            td title="Total deposited excluding the system user" { "Liquidity" }
+            td .num { (format!("$\u{200a}{liquidity:.2}")) }
+        }
+        @for (oc, p) in market.outcomes.iter().zip(implied_probabilities) {
             tr {
-                td title="Total deposited excluding the system user" { "Liquidity" }
-                td .num { (format!("$\u{200a}{liquidity:.2}")) }
-            }
-            @for (oc, p) in market.outcomes.iter().zip(implied_probabilities) {
-                tr {
-                    td { (oc.value) }
-                    td .num { (format!("$\u{200a}{p:.2}")) }
-                }
+                td { (oc.value) }
+                td .num { (format!("$\u{200a}{p:.2}")) }
             }
         }
     }
 }
+
+fn view_market_status(status: &MarketStatusAt) -> Markup {
+    let label = match status.status {
+        MarketStatus::Open if status.is_future => "Opens",
+        MarketStatus::Open => "Opened",
+        MarketStatus::Closed if status.is_future => "Closes",
+        MarketStatus::Closed => "Closed",
+    };
+    html! {
+        tr {
+            td { (label) }
+            td .num { (util::view_date(&status.effective_at)) }
+        }
+    }
+}
+
+pub fn view_market_statuses(market: &Market) -> Markup {
+    html! {
+        // Iterate in reverse order because the statuses are stored in reverse
+        // chronological order.
+        @for status in market.statuses.iter().rev() {
+            (view_market_status(status))
+        }
+    }
+}
+
 fn view_market_position_aside(market: &Market, position: &MarketPosition) -> Markup {
     html! {
         table {
@@ -233,6 +260,7 @@ fn view_market_admin(ctx: &Context, market: &Market) -> Markup {
 }
 
 fn view_market(ctx: &Context, market: &Market, trades: &[db::MarketTradeActivity]) -> Markup {
+    println!("{:?}", market.statuses);
     let dist = market.implied_distribution();
     let ps = dist.ps();
 
@@ -311,7 +339,10 @@ fn view_market(ctx: &Context, market: &Market, trades: &[db::MarketTradeActivity
                     (view_market_activity(ctx, trades))
                 }
                 aside {
-                    (view_market_stats(market, &ps))
+                    table {
+                        (view_market_stats(market, &ps))
+                        (view_market_statuses(market))
+                    }
 
                     h3 { "Your balance" }
                     @match our_position {

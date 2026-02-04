@@ -109,7 +109,7 @@ pub fn create_schema(tx: &mut Transaction) -> Result<()> {
         insert into
           schema_versions (version, created_at)
         values
-          (2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+          (3, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),
@@ -229,6 +229,40 @@ pub fn create_schema(tx: &mut Transaction) -> Result<()> {
         , unique (slug)
         , unique (title)
         );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'create_schema' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        -- Open and close events for the market. Per market there may be at most one
+        -- event in the future, e.g. its scheduled open or close.
+        create table market_statuses
+        ( id           integer primary key
+        , market_id    integer not null references markets (id)
+        , effective_at text not null
+        , status       text not null
+        );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'create_schema' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        create index ix_market_statuses_market_id_effective_at
+          on market_statuses (market_id, effective_at);
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),
@@ -381,6 +415,99 @@ pub fn migrate_schema_from_1_to_2(tx: &mut Transaction) -> Result<()> {
     statement.reset()?;
     let result = match statement.next()? {
         Row => panic!("Query 'migrate_schema_from_1_to_2' unexpectedly returned a row."),
+        Done => (),
+    };
+    Ok(result)
+}
+
+pub fn migrate_schema_from_2_to_3(tx: &mut Transaction) -> Result<()> {
+    let sql = r#"
+        insert into
+          schema_versions (version, created_at)
+        values
+          (3, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'migrate_schema_from_2_to_3' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        create table market_statuses
+        ( id           integer primary key
+        , market_id    integer not null references markets (id)
+        , effective_at text not null
+        , status       text not null
+        );
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'migrate_schema_from_2_to_3' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        create index ix_market_statuses_market_id_effective_at
+          on market_statuses (market_id, effective_at);
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'migrate_schema_from_2_to_3' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        -- We backfill the open times of the markets to their creation time, for past
+        -- markets there was no concept of creating them before they are open.
+        insert into
+          market_statuses (market_id, effective_at, status)
+        select
+          id, created_at, 'Open'
+        from
+          markets;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    match statement.next()? {
+        Row => panic!("Query 'migrate_schema_from_2_to_3' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
+        -- We also backfill the close events from the resolutions.
+        insert into
+          market_statuses (market_id, effective_at, status)
+        select
+          o.market_id, e.created_at, 'Closed'
+        from
+          outcomes o,
+          events e
+        where
+          o.resolved_in = e.id;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    let result = match statement.next()? {
+        Row => panic!("Query 'migrate_schema_from_2_to_3' unexpectedly returned a row."),
         Done => (),
     };
     Ok(result)
@@ -710,6 +837,53 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
             panic!("Query 'get_market_by_slug' should return at most one row.");
         }
     }
+    Ok(result)
+}
+
+#[derive(Debug)]
+pub struct MarketStatus {
+    pub effective_at: String,
+    pub status: String,
+    pub is_future: i64,
+}
+
+pub fn get_market_statuses<'i, 't, 'a>(
+    tx: &'i mut Transaction<'t, 'a>,
+    market_id: i64,
+) -> Result<Iter<'i, 'a, MarketStatus>> {
+    let sql = r#"
+        select
+            effective_at
+          , status
+          , unixepoch(effective_at) > unixepoch() as is_future
+        from
+          market_statuses
+        where
+          market_id = :market_id
+        order by
+          effective_at desc
+        limit
+          -- There should be at most one future event, so if we select 2, we also get
+          -- the current status.
+          2;
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, market_id)?;
+    let decode_row = |statement: &Statement| {
+        Ok(MarketStatus {
+            effective_at: statement.read(0)?,
+            status: statement.read(1)?,
+            is_future: statement.read(2)?,
+        })
+    };
+    let result = Iter {
+        statement,
+        decode_row,
+    };
     Ok(result)
 }
 
