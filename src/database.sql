@@ -100,7 +100,7 @@ create table market_statuses
 ( id           integer primary key
 , market_id    integer not null references markets (id)
 , effective_at text not null
-, status       text not null
+, status       text not null check (status in ('Open', 'Closed'))
 );
 create index ix_market_statuses_market_id_effective_at
   on market_statuses (market_id, effective_at);
@@ -195,7 +195,7 @@ create table market_statuses
 ( id           integer primary key
 , market_id    integer not null references markets (id)
 , effective_at text not null
-, status       text not null
+, status       text not null check (status in ('Open', 'Closed'))
 );
 create index ix_market_statuses_market_id_effective_at
   on market_statuses (market_id, effective_at);
@@ -512,3 +512,18 @@ where
   and (a.asset_id = o.id)
 order by
   e.id desc;
+
+-- Insert a market status change effective at the given time.
+-- Time must be ISO-8601 with Z offset.
+-- @query set_market_status_at(market_id: i64, effective_at: str, status: str)
+insert into
+  market_statuses (market_id, effective_at, status)
+values
+  (:market_id, :effective_at, :status);
+
+-- Insert a market status change effective now.
+-- @query set_market_status_now(market_id: i64, status: str)
+insert into
+  market_statuses (market_id, effective_at, status)
+values
+  (:market_id, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), :status);

@@ -42,3 +42,7 @@ is in a state where:
 kind = "binary"
 outcomes = ["Yes", "No"]
 fund_micros = 150_000_000
+
+# Open and close dates are optional.
+opens_at = 2026-01-01T00:00:00Z
+closes_at = 2027-01-01T00:00:00Z

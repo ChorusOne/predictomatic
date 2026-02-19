@@ -247,7 +247,7 @@ pub fn create_schema(tx: &mut Transaction) -> Result<()> {
         ( id           integer primary key
         , market_id    integer not null references markets (id)
         , effective_at text not null
-        , status       text not null
+        , status       text not null check (status in ('Open', 'Closed'))
         );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
@@ -442,7 +442,7 @@ pub fn migrate_schema_from_2_to_3(tx: &mut Transaction) -> Result<()> {
         ( id           integer primary key
         , market_id    integer not null references markets (id)
         , effective_at text not null
-        , status       text not null
+        , status       text not null check (status in ('Open', 'Closed'))
         );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
@@ -1354,6 +1354,57 @@ pub fn get_trade_activity_by_market<'i, 't, 'a>(
     let result = Iter {
         statement,
         decode_row,
+    };
+    Ok(result)
+}
+
+/// Insert a market status change effective at the given time.
+/// Time must be ISO-8601 with Z offset.
+pub fn set_market_status_at(
+    tx: &mut Transaction,
+    market_id: i64,
+    effective_at: &str,
+    status: &str,
+) -> Result<()> {
+    let sql = r#"
+        insert into
+          market_statuses (market_id, effective_at, status)
+        values
+          (:market_id, :effective_at, :status);
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, market_id)?;
+    statement.bind(2, effective_at)?;
+    statement.bind(3, status)?;
+    let result = match statement.next()? {
+        Row => panic!("Query 'set_market_status_at' unexpectedly returned a row."),
+        Done => (),
+    };
+    Ok(result)
+}
+
+/// Insert a market status change effective now.
+pub fn set_market_status_now(tx: &mut Transaction, market_id: i64, status: &str) -> Result<()> {
+    let sql = r#"
+        insert into
+          market_statuses (market_id, effective_at, status)
+        values
+          (:market_id, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), :status);
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, market_id)?;
+    statement.bind(2, status)?;
+    let result = match statement.next()? {
+        Row => panic!("Query 'set_market_status_now' unexpectedly returned a row."),
+        Done => (),
     };
     Ok(result)
 }

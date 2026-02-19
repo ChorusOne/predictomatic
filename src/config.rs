@@ -106,4 +106,63 @@ pub struct MarketConfig {
     ///
     /// This is paid for by minting new points from the system account.
     pub fund_micros: i64,
+
+    /// Date at which the market opens.
+    ///
+    /// Should be TOML datetime with Z offset, e.g. `2026-02-19T14:12:00Z`.
+    /// This can be used to create markets that open in the future. When not
+    /// specified, the market opens immediately at creation time.
+    pub opens_at: Option<toml::value::Datetime>,
+
+    /// Date at which the market closes.
+    ///
+    /// Should be a TOML datetime with Z offset, like `opens`. This can be used
+    /// to set a future deadline by which the market closes. This is useful for
+    /// preventing trades in a market for which the resolution is known, but
+    /// which is not resolved yet. For example, when the market is about
+    /// something that will become known on a given date in the weekend, but the
+    /// admin can only resolve the market next working day.
+    ///
+    /// When not specified, the market will not have a specific close date.
+    pub closes_at: Option<toml::value::Datetime>,
+}
+
+/// Format a TOML datetime as ISO-8601 UTC time that we support in the database.
+fn as_iso8601(dt: &toml::value::Datetime) -> String {
+    assert_eq!(
+        dt.offset,
+        Some(toml::value::Offset::Z),
+        "Unsupported datetime {dt}, expected `Z` offset suffix.",
+    );
+    assert!(
+        dt.date.is_some(),
+        "Unsupported datetime {dt}, expected a date part."
+    );
+    assert!(
+        dt.time.is_some(),
+        "Unsupported datetime {dt}, expected a time part."
+    );
+    dt.to_string()
+}
+
+impl MarketConfig {
+    pub fn opens_at_iso8601(&self) -> Option<String> {
+        self.opens_at.as_ref().map(as_iso8601)
+    }
+
+    pub fn closes_at_iso8601(&self) -> Option<String> {
+        self.closes_at.as_ref().map(as_iso8601)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Config;
+
+    #[test]
+    fn example_config_can_be_parsed() {
+        let example_toml = std::fs::read_to_string("predictomatic.toml")
+            .expect("Example config in repo should be readable.");
+        let _: Config = toml::from_str(&example_toml).expect("Example config should be parseable.");
+    }
 }

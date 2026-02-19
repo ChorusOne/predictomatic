@@ -624,6 +624,13 @@ pub fn create_market(tx: &mut Transaction, market: &MarketConfig) -> Result<Mark
         db::create_outcome(tx, market_id, outcome)?;
     }
 
+    if let Some(opens_at) = market.opens_at_iso8601() {
+        db::set_market_status_at(tx, market_id, &opens_at, "Open")?;
+    }
+    if let Some(closes_at) = market.closes_at_iso8601() {
+        db::set_market_status_at(tx, market_id, &closes_at, "Closed")?;
+    }
+
     let fund_amount = AssetId::POINTS.micros(market.fund_micros);
     let market = get_market_by_slug(tx, &market.slug)?.expect("We created it, it exists.");
     create_deposit(tx, &market, fund_amount, "SYSTEM")?;
