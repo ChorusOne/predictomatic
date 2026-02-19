@@ -365,7 +365,7 @@ pub struct RealizedProfit {
     pub amount_out: Amount,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum MarketStatus {
     Open,
     Closed,
@@ -594,6 +594,14 @@ pub fn get_market_by_slug(tx: &mut Transaction, slug: &str) -> Result<Option<Mar
             is_future: row.is_future == 1,
         });
     }
+    assert!(
+        statuses.iter().filter(|s| s.is_future).count() <= 1,
+        "Can have at most one future status."
+    );
+    assert!(
+        statuses.len() <= 1 || statuses[0].status != statuses[1].status,
+        "Status change must change something."
+    );
 
     Ok(Some(Market {
         id: market_id,
