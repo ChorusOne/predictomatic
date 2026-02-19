@@ -398,14 +398,25 @@ pub struct Market {
 
 impl Market {
     /// Whether it is possible to trade in the market.
-    // TODO: Replace with `outcome() -> Option<Outcome>` or something?
     pub fn is_open(&self) -> bool {
-        self.profits.is_empty()
+        let status = &self.statuses[0];
+        assert!(!status.is_future, "All markets have a current status.");
+        match status.status {
+            MarketStatus::Open => true,
+            MarketStatus::Closed => false,
+        }
     }
 
     /// If the market is resolved, return the oucome it resolved to.
     pub fn resolution(&self) -> Option<&Outcome> {
         self.outcomes.iter().find(|oc| oc.is_resolution)
+    }
+
+    /// Return whether the market has been resolved.
+    pub fn is_resolved(&self) -> bool {
+        let is_resolved = self.resolution().is_some();
+        assert!(!is_resolved || !self.is_open(), "A resolved market cannot be open.");
+        is_resolved
     }
 
     /// Return the amount of points deposited into this market by non-system users.

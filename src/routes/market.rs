@@ -85,8 +85,8 @@ fn view_market_position_aside(market: &Market, position: &MarketPosition) -> Mar
                 }
             }
             // Market value and unrealized UPnL only makes sense if the market
-            // is still open.
-            @if market.is_open() {
+            // is not yet resolved.
+            @if !market.is_resolved() {
                 tr {
                     td { "Market value"}
                     td .num { (format!("$\u{200a}{:.2}", position.market_value))}
@@ -104,7 +104,7 @@ fn view_market_position_aside(market: &Market, position: &MarketPosition) -> Mar
     }
 }
 
-fn view_market_participants_open(ctx: &Context, positions: &[MarketPosition]) -> Markup {
+fn view_market_participants_unresolved(ctx: &Context, positions: &[MarketPosition]) -> Markup {
     html! {
         table {
             tr {
@@ -175,6 +175,8 @@ fn view_prediction_binary(ctx: &Context, market: &Market, ps: &[f64]) -> Markup 
             span .percentage .puser { (percentage) }
             span .knob .disabled {}
         }
+        // TODO: Switch based on open/closed.
+        p { "This market is closed, you can no longer trade here." }
         noscript { "You need to enable Javascript to trade." }
         div #trade-offer {
             h3 { a href={(ctx.prefix) "/help#trading"} { "Trade" } }
@@ -244,15 +246,24 @@ fn view_market_admin(ctx: &Context, market: &Market) -> Markup {
     html! {
         h3 { "Administration" }
         form method="post" {
-            @for outcome in &market.outcomes {
-                @let url = format!(
-                    "{}/market/{}/resolve/{}",
-                    ctx.prefix,
-                    market.slug,
-                    outcome.id.0,
-                );
-                button .wide type="submit" formaction=(url) {
-                    "Resolve " (outcome.value)
+            @if market.is_open() {
+                button .wide type="submit" formaction=(ctx.market_url(market, "/close")) {
+                    "Close market"
+                }
+            } @else {
+                button .wide type="submit" formaction=(ctx.market_url(market, "/open")) {
+                    "Open market"
+                }
+                @for outcome in &market.outcomes {
+                    @let url = format!(
+                        "{}/market/{}/resolve/{}",
+                        ctx.prefix,
+                        market.slug,
+                        outcome.id.0,
+                    );
+                    button .wide type="submit" formaction=(url) {
+                        "Resolve " (outcome.value)
+                    }
                 }
             }
         }
@@ -324,16 +335,16 @@ fn view_market(ctx: &Context, market: &Market, trades: &[db::MarketTradeActivity
             div .main {
                 section {
                     h1 { (market.title) }
-                    @match market.is_open() {
-                        true => (view_prediction_binary(ctx, market, &ps)),
-                        false => (view_resolution(market)),
+                    @match market.is_resolved() {
+                        true => (view_resolution(market)),
+                        false => (view_prediction_binary(ctx, market, &ps)),
                     }
                     h2 { "Resolution criteria" }
                     p { (market.description) }
                     h2 { "Participants" }
-                    @match market.is_open() {
-                        true => (view_market_participants_open(ctx, &positions)),
-                        false => (view_market_participants_profits(ctx, &market.profits)),
+                    @match market.is_resolved() {
+                        true => (view_market_participants_profits(ctx, &market.profits)),
+                        false => (view_market_participants_unresolved(ctx, &positions)),
                     }
                     h2 { "Activity" }
                     (view_market_activity(ctx, trades))
@@ -401,7 +412,7 @@ fn view_market(ctx: &Context, market: &Market, trades: &[db::MarketTradeActivity
                         }
                     }
 
-                    @if ctx.is_admin && market.is_open() {
+                    @if ctx.is_admin && !market.is_resolved() {
                         (view_market_admin(ctx, market))
                     }
                 }
