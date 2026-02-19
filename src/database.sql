@@ -99,6 +99,7 @@ create table markets
 create table market_statuses
 ( id           integer primary key
 , market_id    integer not null references markets (id)
+, created_at   text not null
 , effective_at text not null
 , status       text not null check (status in ('Open', 'Closed'))
 );
@@ -194,6 +195,7 @@ values
 create table market_statuses
 ( id           integer primary key
 , market_id    integer not null references markets (id)
+, created_at   text not null
 , effective_at text not null
 , status       text not null check (status in ('Open', 'Closed'))
 );
@@ -203,17 +205,17 @@ create index ix_market_statuses_market_id_effective_at
 -- We backfill the open times of the markets to their creation time, for past
 -- markets there was no concept of creating them before they are open.
 insert into
-  market_statuses (market_id, effective_at, status)
+  market_statuses (market_id, created_at, effective_at, status)
 select
-  id, created_at, 'Open'
+  id, created_at, created_at, 'Open'
 from
   markets;
 
 -- We also backfill the close events from the resolutions.
 insert into
-  market_statuses (market_id, effective_at, status)
+  market_statuses (market_id, created_at, effective_at, status)
 select
-  o.market_id, e.created_at, 'Closed'
+  o.market_id, e.created_at, e.created_at, 'Closed'
 from
   outcomes o,
   events e
@@ -514,16 +516,36 @@ order by
   e.id desc;
 
 -- Insert a market status change effective at the given time.
+--
 -- Time must be ISO-8601 with Z offset.
+-- The caller is responsible for ensuring that there is at most one future
+-- status.
 -- @query set_market_status_at(market_id: i64, effective_at: str, status: str)
 insert into
-  market_statuses (market_id, effective_at, status)
+  market_statuses (market_id, created_at, effective_at, status)
 values
-  (:market_id, :effective_at, :status);
+  ( :market_id
+  , strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+  , :effective_at
+  , :status
+  );
 
 -- Insert a market status change effective now.
--- @query set_market_status_now(market_id: i64, status: str)
+--
+-- This removes any scheduled future statuses.
+-- @begin set_market_status_now(market_id: i64, status: str)
+delete from
+  market_statuses
+where
+  (market_id = :market_id)
+  and (effective_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+
 insert into
-  market_statuses (market_id, effective_at, status)
+  market_statuses (market_id, created_at, effective_at, status)
 values
-  (:market_id, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), :status);
+  ( :market_id
+  , strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+  , strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+  , :status
+  );
+-- @end set_market_status_now

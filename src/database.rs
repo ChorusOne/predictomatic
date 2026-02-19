@@ -246,6 +246,7 @@ pub fn create_schema(tx: &mut Transaction) -> Result<()> {
         create table market_statuses
         ( id           integer primary key
         , market_id    integer not null references markets (id)
+        , created_at   text not null
         , effective_at text not null
         , status       text not null check (status in ('Open', 'Closed'))
         );
@@ -441,6 +442,7 @@ pub fn migrate_schema_from_2_to_3(tx: &mut Transaction) -> Result<()> {
         create table market_statuses
         ( id           integer primary key
         , market_id    integer not null references markets (id)
+        , created_at   text not null
         , effective_at text not null
         , status       text not null check (status in ('Open', 'Closed'))
         );
@@ -473,9 +475,9 @@ pub fn migrate_schema_from_2_to_3(tx: &mut Transaction) -> Result<()> {
         -- We backfill the open times of the markets to their creation time, for past
         -- markets there was no concept of creating them before they are open.
         insert into
-          market_statuses (market_id, effective_at, status)
+          market_statuses (market_id, created_at, effective_at, status)
         select
-          id, created_at, 'Open'
+          id, created_at, created_at, 'Open'
         from
           markets;
         "#;
@@ -492,9 +494,9 @@ pub fn migrate_schema_from_2_to_3(tx: &mut Transaction) -> Result<()> {
     let sql = r#"
         -- We also backfill the close events from the resolutions.
         insert into
-          market_statuses (market_id, effective_at, status)
+          market_statuses (market_id, created_at, effective_at, status)
         select
-          o.market_id, e.created_at, 'Closed'
+          o.market_id, e.created_at, e.created_at, 'Closed'
         from
           outcomes o,
           events e
@@ -1359,7 +1361,10 @@ pub fn get_trade_activity_by_market<'i, 't, 'a>(
 }
 
 /// Insert a market status change effective at the given time.
+///
 /// Time must be ISO-8601 with Z offset.
+/// The caller is responsible for ensuring that there is at most one future
+/// status.
 pub fn set_market_status_at(
     tx: &mut Transaction,
     market_id: i64,
@@ -1368,9 +1373,13 @@ pub fn set_market_status_at(
 ) -> Result<()> {
     let sql = r#"
         insert into
-          market_statuses (market_id, effective_at, status)
+          market_statuses (market_id, created_at, effective_at, status)
         values
-          (:market_id, :effective_at, :status);
+          ( :market_id
+          , strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+          , :effective_at
+          , :status
+          );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),
@@ -1388,12 +1397,36 @@ pub fn set_market_status_at(
 }
 
 /// Insert a market status change effective now.
+///
+/// This removes any scheduled future statuses.
 pub fn set_market_status_now(tx: &mut Transaction, market_id: i64, status: &str) -> Result<()> {
     let sql = r#"
+        delete from
+          market_statuses
+        where
+          (market_id = :market_id)
+          and (effective_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+        "#;
+    let statement = match tx.statements.entry(sql.as_ptr()) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(vacancy) => vacancy.insert(tx.connection.prepare(sql)?),
+    };
+    statement.reset()?;
+    statement.bind(1, market_id)?;
+    match statement.next()? {
+        Row => panic!("Query 'set_market_status_now' unexpectedly returned a row."),
+        Done => {}
+    }
+
+    let sql = r#"
         insert into
-          market_statuses (market_id, effective_at, status)
+          market_statuses (market_id, created_at, effective_at, status)
         values
-          (:market_id, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), :status);
+          ( :market_id
+          , strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+          , strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+          , :status
+          );
         "#;
     let statement = match tx.statements.entry(sql.as_ptr()) {
         Occupied(entry) => entry.into_mut(),
