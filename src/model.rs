@@ -624,8 +624,10 @@ pub fn create_market(tx: &mut Transaction, market: &MarketConfig) -> Result<Mark
         db::create_outcome(tx, market_id, outcome)?;
     }
 
-    if let Some(opens_at) = market.opens_at_iso8601() {
-        db::set_market_status_at(tx, market_id, &opens_at, "Open")?;
+    // If there was an open date specified, use it, otherwise open immediately.
+    match market.opens_at_iso8601() {
+        Some(t) => db::set_market_status_at(tx, market_id, &t, "Open")?,
+        None => db::set_market_status_now(tx, market_id, "Open")?,
     }
     if let Some(closes_at) = market.closes_at_iso8601() {
         db::set_market_status_at(tx, market_id, &closes_at, "Closed")?;
